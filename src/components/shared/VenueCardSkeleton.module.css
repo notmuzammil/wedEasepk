@@ -1,0 +1,83 @@
+/* VenueCardSkeleton.module.css — shimmer loading animation */
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+.shimmerBase {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e9ecef 40%,
+    #f3f4f6 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Card container */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* Hero image area */
+.image {
+  width: 100%;
+  height: 210px;
+  composes: shimmerBase;
+}
+
+/* Body padding */
+.body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Generic line */
+.line {
+  border-radius: 6px;
+  composes: shimmerBase;
+}
+
+.title   { height: 18px; width: 75%; }
+.subtitle { height: 14px; width: 50%; }
+.price   { height: 16px; width: 40%; }
+
+/* Pill badges row */
+.row {
+  display: flex;
+  gap: 8px;
+}
+.pill {
+  height: 24px;
+  width: 72px;
+  border-radius: 99px;
+  composes: shimmerBase;
+}
+
+.divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
+}
+
+/* Footer row */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn {
+  height: 34px;
+  width: 96px;
+  border-radius: 8px;
+  composes: shimmerBase;
+}
