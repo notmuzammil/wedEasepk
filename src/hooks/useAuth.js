@@ -126,8 +126,8 @@ export function useRegister() {
   const showToast = useUiStore((state) => state.showToast);
 
   return useMutation({
-    mutationFn: ({ email, password, fullName, role, phone }) =>
-      signUpWithEmail(email, password, fullName, role, phone),
+    mutationFn: ({ email, password, full_name, role, phone_number }) =>
+      signUpWithEmail(email, password, full_name, role, phone_number),
     onSuccess: () => {
       showToast('Registration successful!', 'success');
     },

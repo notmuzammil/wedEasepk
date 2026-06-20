@@ -125,7 +125,7 @@ const Profile = () => {
 
   const onProfileSubmit = async (data) => {
     await updateProfileMutation.mutateAsync({
-      fullName: data.fullName,
+      fullName: data.full_name,
       phone:    data.phone,
     });
   };
