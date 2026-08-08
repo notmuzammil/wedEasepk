@@ -54,6 +54,7 @@ export function useAuth() {
         return;
       }
 
+      setLoading(true);
       setUser(session.user);
 
       try {
