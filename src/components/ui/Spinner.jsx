@@ -8,17 +8,26 @@ const sizeMap = {
 };
 
 /**
+ * Tailwind purges classes it cannot see as complete strings, so the border
+ * colours have to be spelled out rather than built with a template literal.
+ */
+const colorMap = {
+  rose:    'border-rose-600    border-t-transparent',
+  emerald: 'border-emerald-800 border-t-transparent',
+  stone:   'border-stone-400   border-t-transparent',
+  white:   'border-white       border-t-transparent',
+  current: 'border-current     border-t-transparent',
+};
+
+/**
  * Animated loading ring.
  *
  * @param {object} props
  * @param {'sm'|'md'|'lg'} [props.size='md']
- * @param {string} [props.color='rose'] — Tailwind color token or 'current'
+ * @param {'rose'|'emerald'|'stone'|'white'|'current'} [props.color='rose']
  */
 export function Spinner({ size = 'md', color = 'rose' }) {
-  const borderColor =
-    color === 'current'
-      ? 'border-current border-t-transparent'
-      : `border-${color}-600 border-t-transparent`;
+  const borderColor = colorMap[color] || colorMap.rose;
 
   return (
     <span
@@ -31,5 +40,5 @@ export function Spinner({ size = 'md', color = 'rose' }) {
 
 Spinner.propTypes = {
   size:  PropTypes.oneOf(['sm', 'md', 'lg']),
-  color: PropTypes.string,
+  color: PropTypes.oneOf(['rose', 'emerald', 'stone', 'white', 'current']),
 };

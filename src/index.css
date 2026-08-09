@@ -4,19 +4,89 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Palette mirror.
+ *
+ * A few pages style themselves with inline <style> blocks, which Tailwind
+ * classes cannot reach. They read these variables so they stay in step with
+ * tailwind.config.js — keep the two in sync when re-tuning the theme.
+ */
 @layer base {
+  :root {
+    /* Brand — rosewood */
+    --brand-50:  #fdf2f6;
+    --brand-100: #fce7ef;
+    --brand-200: #f9cfe0;
+    --brand-300: #f5a8c6;
+    --brand-500: #e2447f;
+    --brand-600: #d12463;
+    --brand-700: #b01a51;
+    --brand-900: #78183c;
+
+    /* Neutrals — warm ivory */
+    --ink-950:   #171310;
+    --ink-900:   #231d18;
+    --ink-800:   #3b3229;
+    --ink-700:   #584b40;
+    --ink-600:   #6d5d4f;
+    --ink-500:   #837262;
+    --ink-400:   #a3917d;
+    --ink-300:   #cec0ae;
+    --ink-250:   #ded2c4;
+    --ink-200:   #eae0d4;
+    --ink-150:   #f2eae0;
+    --ink-100:   #f8f2ec;
+    --ink-50:    #fdfaf7;
+
+    /* Accent — antique gold */
+    --gold-400:  #e5be2b;
+    --gold-500:  #d4af37;
+
+    --surface:   #ffffff;
+    --page:      #fdfaf7;
+
+    /* Sticky navbar: h-16 (64px) plus its 1px bottom border. Secondary
+       sticky bars pin to this so no page content shows between them. */
+    --nav-h:     65px;
+    --subnav-h:  67px;
+  }
+
   body {
     @apply bg-stone-50 text-stone-900 font-sans antialiased;
   }
-  
+
   h1, h2, h3, h4, .font-serif {
     font-family: 'Playfair Display', Georgia, Cambria, "Times New Roman", Times, serif;
+  }
+
+  /* Selection and focus pick up the brand rather than the browser default. */
+  ::selection {
+    background-color: var(--brand-200);
+    color: var(--brand-900);
   }
 }
 
 @layer utilities {
   .animate-bounce-short {
     animation: bounceShort 2.5s ease-in-out infinite;
+  }
+
+  /* Gold-flecked rule used to separate hero sections. */
+  .rule-gold {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      var(--gold-500) 50%,
+      transparent
+    );
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -26,5 +96,11 @@
   }
   50% {
     transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-bounce-short {
+    animation: none;
   }
 }

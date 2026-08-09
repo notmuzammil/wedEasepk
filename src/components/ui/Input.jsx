@@ -6,9 +6,12 @@ import PropTypes from 'prop-types';
  * Uses forwardRef so react-hook-form's `register()` works seamlessly.
  */
 export const Input = forwardRef(function Input(
-  { label, error, helperText, leftIcon, className = '', id, ...rest },
+  { label, error, helperText, leftIcon, icon, className = '', id, ...rest },
   ref
 ) {
+  // `icon` is an accepted alias for `leftIcon`; without it the element would be
+  // spread onto the <input> as an unknown DOM attribute.
+  const adornment = leftIcon ?? icon;
   const inputId = id || `input-${label?.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
@@ -20,9 +23,9 @@ export const Input = forwardRef(function Input(
       )}
 
       <div className="relative">
-        {leftIcon && (
+        {adornment && (
           <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
-            {leftIcon}
+            {adornment}
           </span>
         )}
 
@@ -33,7 +36,7 @@ export const Input = forwardRef(function Input(
             block w-full rounded-lg border bg-white px-3 py-2 text-sm text-stone-900
             placeholder:text-stone-400 transition-colors
             focus:outline-none focus:ring-2 focus:ring-offset-0
-            ${leftIcon ? 'pl-10' : ''}
+            ${adornment ? 'pl-10' : ''}
             ${error
               ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
               : 'border-stone-300 focus:border-rose-500 focus:ring-rose-200'}
@@ -62,6 +65,7 @@ Input.propTypes = {
   error:      PropTypes.string,
   helperText: PropTypes.string,
   leftIcon:   PropTypes.node,
+  icon:       PropTypes.node,
   className:  PropTypes.string,
   id:         PropTypes.string,
 };

@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Lock, Sparkles, Building, AlertTriangle, Check } from 'lucide-react';
+import { User, Mail, Phone, Lock, Building, AlertTriangle, Check } from 'lucide-react';
 import { registerSchema } from '../../utils/validators';
 import { useRegister } from '../../hooks/useAuth';
-import { Input, Button } from '../../components/ui';
+import { Input, Button, LogoMark } from '../../components/ui';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -58,10 +58,10 @@ export default function RegisterPage() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
 
         {/* Top Branding */}
-        <div className="relative z-10 flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-rose-200 fill-rose-100/20" />
+        <div className="relative z-10 flex items-center gap-2.5">
+          <LogoMark variant="inverse" className="h-10 w-10" />
           <span className="font-serif text-2xl font-bold tracking-wide">
-            Shaadi<span className="text-rose-200">Spaces</span>
+            Wed<span className="text-rose-200">Ease</span>
           </span>
         </div>
 
@@ -71,14 +71,13 @@ export default function RegisterPage() {
             Platform for Premium Venues
           </span>
           
-          {/* Urdu Calligraphy / Tagline */}
-          <h1 className="font-serif text-4xl xl:text-5xl font-bold leading-relaxed text-right pr-4 border-r-2 border-rose-300/40">
-            خوابوں کی شادی کا آغاز، بہترین مقامات کے ساتھ
+          {/* Tagline */}
+          <h1 className="font-serif text-4xl xl:text-5xl font-bold leading-tight tracking-tight">
+            Start planning your perfect celebration.
           </h1>
 
-          {/* English translation sub-tagline */}
-          <p className="text-lg text-rose-100 font-light leading-relaxed">
-            Create an account to start planning your perfect celebration. Choose your role and gain access to Karachi's most exclusive venue listings.
+          <p className="text-lg text-rose-100/90 font-light leading-relaxed">
+            Choose your role and gain access to Pakistan&apos;s most exclusive venue listings.
           </p>
         </div>
 
@@ -89,7 +88,7 @@ export default function RegisterPage() {
             <span className="w-8 h-8 rounded-full border-2 border-rose-500 bg-pink-300 flex items-center justify-center text-xs font-bold text-pink-800">M</span>
             <span className="w-8 h-8 rounded-full border-2 border-rose-500 bg-amber-300 flex items-center justify-center text-xs font-bold text-amber-800">K</span>
           </div>
-          <p>Trusted by over <strong className="text-white font-semibold">1,000+ couples</strong> in Karachi.</p>
+          <p>Trusted by couples planning their big day across Pakistan.</p>
         </div>
       </div>
 
@@ -98,13 +97,15 @@ export default function RegisterPage() {
         <div className="w-full max-w-md space-y-8 py-8">
           {/* Mobile Branding Header */}
           <div className="lg:hidden text-center space-y-2">
-            <div className="inline-flex items-center gap-2 text-rose-600">
-              <Sparkles className="h-6 w-6 fill-rose-100" />
+            <div className="inline-flex items-center gap-2.5 text-rose-600">
+              <LogoMark className="h-9 w-9" />
               <span className="font-serif text-2xl font-bold tracking-wide">
-                Shaadi<span className="text-stone-850">Spaces</span>
+                Wed<span className="text-stone-850">Ease</span>
               </span>
             </div>
-            <p className="text-stone-500 text-xs font-light">خوابوں کی شادی کا آغاز، بہترین مقامات کے ساتھ</p>
+            <p className="text-stone-500 text-xs font-light">
+              Start planning your perfect celebration.
+            </p>
           </div>
 
           <div className="space-y-2 text-center lg:text-left">
@@ -197,10 +198,11 @@ export default function RegisterPage() {
 
             {/* Vendor review message notice banner */}
             {activeRole === 'vendor' && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex gap-2 animate-fadeIn">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
-                  <strong>Vendor Notice:</strong> Your vendor account will undergo verification before activation. You will be able to set up venue listings after approval.
+                  <strong>Vendor Notice:</strong> You can add venues right away, but each
+                  listing is reviewed by our team before it goes live to customers.
                 </span>
               </div>
             )}

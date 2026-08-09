@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,7 @@ import {
 import { useCreateVenue } from '../../hooks/useVenues';
 import { useAuthStore } from '../../store/authStore';
 import { useUiStore } from '../../store/uiStore';
-import { PAKISTAN_CITIES, AMENITIES } from '../../utils/constants';
+import { PAKISTAN_CITIES, AMENITIES, VENUE_TYPES } from '../../utils/constants';
 import { uploadVenueImage } from '../../services/venueService';
 import { supabase } from '../../lib/supabaseClient';
 import { Input } from '../../components/ui/Input';
@@ -20,6 +20,9 @@ import { Button } from '../../components/ui/Button';
 // Validation Schema for steps
 const step1Schema = z.object({
   name: z.string().min(3, 'Venue name must be at least 3 characters'),
+  type: z.enum(['hall', 'marquee', 'banquet', 'lawn'], {
+    errorMap: () => ({ message: 'Please choose a venue type' }),
+  }),
   city: z.string().min(1, 'Please select a city'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
   description: z.string().min(20, 'Description must be at least 20 characters'),
@@ -61,7 +64,7 @@ export default function AddVenue() {
     getValues: getValues1,
   } = useForm({
     resolver: zodResolver(step1Schema),
-    defaultValues: { name: '', city: 'Karachi', address: '', description: '' }
+    defaultValues: { name: '', type: 'hall', city: 'Karachi', address: '', description: '' }
   });
 
   const {
@@ -77,6 +80,14 @@ export default function AddVenue() {
   });
 
   const watchAmenities = watch2('amenities', []);
+
+  // Object URLs must be created once per file and revoked, otherwise every
+  // re-render leaks another blob reference.
+  const previews = useMemo(
+    () => imageFiles.map((file) => URL.createObjectURL(file)),
+    [imageFiles]
+  );
+  useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews]);
 
   // Amenity Checkbox hander
   const toggleAmenity = (id) => {
@@ -156,20 +167,20 @@ export default function AddVenue() {
       }
 
       // 2. Insert Parent Venue Space
+      const capacityMax = parseInt(values2.capacityMax, 10);
       const newVenue = await createVenueMutation.mutateAsync({
         vendor_id: profile.id,
         name: values1.name,
+        type: values1.type,
         city: values1.city,
         address: values1.address,
-        area: values1.city, // fallback
+        area: values1.area || values1.city,
         description: values1.description,
         capacity_min: parseInt(values2.capacityMin || 50, 10),
-        capacity_max: parseInt(values2.capacityMax, 10),
+        capacity_max: capacityMax,
+        // `capacity` mirrors capacity_max for the legacy single-capacity column.
+        capacity: capacityMax,
         price_per_day: parseInt(values2.pricePerDay, 10),
-        // Send duplicate fields for older database versions compatibility
-        capacity: parseInt(values2.capacityMax, 10),
-        price_per_plate: parseInt(values2.pricePerDay, 10),
-        min_spending: parseInt(values2.pricePerDay, 10),
         amenities: values2.amenities,
         images: uploadedUrls, // array column fallback
         status: 'pending_approval', // awaits Admin live approval
@@ -267,18 +278,27 @@ export default function AddVenue() {
           <h2 className="font-serif text-lg font-bold text-stone-900 border-b border-stone-100 pb-3">Step 1: General Space Information</h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input 
-              label="Venue Name *" 
-              placeholder="e.g. Shalimar Banquet Lawn" 
-              error={errors1.name?.message} 
-              {...register1('name')} 
+            <Input
+              label="Venue Name *"
+              placeholder="e.g. Shalimar Banquet Lawn"
+              error={errors1.name?.message}
+              {...register1('name')}
               id="new-venue-name"
             />
-            <Select 
-              label="City Location *" 
-              options={PAKISTAN_CITIES.map(c => ({ value: c, label: c }))} 
-              error={errors1.city?.message} 
-              {...register1('city')} 
+            <Select
+              label="Venue Type *"
+              options={VENUE_TYPES}
+              placeholder=""
+              error={errors1.type?.message}
+              {...register1('type')}
+              id="new-venue-type"
+            />
+            <Select
+              label="City Location *"
+              options={PAKISTAN_CITIES.map(c => ({ value: c, label: c }))}
+              placeholder=""
+              error={errors1.city?.message}
+              {...register1('city')}
               id="new-venue-city"
             />
           </div>
@@ -406,7 +426,7 @@ export default function AddVenue() {
                 : 'border-stone-300 bg-stone-50 hover:bg-stone-100/50'
             }`}
           >
-            <UploadCloud size={36} className="text-stone-400 stroke-1.5" />
+            <UploadCloud size={36} strokeWidth={1.5} className="text-stone-400" />
             <div className="space-y-1">
               <span className="block text-xs font-bold text-stone-850">Drag and drop photos here</span>
               <span className="block text-[10px] text-stone-400">Supports PNG, JPEG, and WebP</span>
@@ -434,10 +454,10 @@ export default function AddVenue() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {imageFiles.map((file, idx) => {
-                  const url = URL.createObjectURL(file);
+                  const url = previews[idx];
                   return (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={`${file.name}-${idx}`}
                       className={`relative aspect-video rounded-xl overflow-hidden bg-stone-100 border-2 transition ${
                         coverIndex === idx ? 'border-rose-500 shadow-md ring-2 ring-rose-500/10' : 'border-stone-200'
                       }`}

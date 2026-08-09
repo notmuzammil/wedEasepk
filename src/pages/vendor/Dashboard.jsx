@@ -27,15 +27,17 @@ export default function VendorDashboard() {
       (b) => b.status === 'approved' || b.status === 'confirmed' || b.status === 'paid'
     ).length;
 
-    // Mock inquiries: calculated dynamically to keep it realistic and live
-    const totalEnquiries = Math.round(totalVenues * 3.2) + pendingBookings + 5;
+    // Listings still waiting on admin review
+    const venuesUnderReview = venues.filter(
+      (v) => v.status === 'pending_approval' || v.status === 'pending'
+    ).length;
 
     // Total income from confirmed/paid reservations
     const earnings = bookings
       .filter((b) => b.status === 'paid' || b.status === 'approved' || b.status === 'confirmed')
       .reduce((sum, b) => sum + Number(b.total_price || 0), 0);
 
-    return { totalVenues, pendingBookings, confirmedBookings, totalEnquiries, earnings };
+    return { totalVenues, pendingBookings, confirmedBookings, venuesUnderReview, earnings };
   }, [venues, bookings]);
 
   // Last 5 bookings slice
@@ -59,7 +61,7 @@ export default function VendorDashboard() {
       render: (row) => (
         <div>
           <div className="font-semibold text-stone-800">{row.customer?.full_name || 'Client'}</div>
-          <div className="text-[10px] text-stone-400 font-medium">{row.customer?.phone_number || row.customer?.phone || 'No phone'}</div>
+          <div className="text-[10px] text-stone-400 font-medium">{row.customer?.phone || 'No phone'}</div>
         </div>
       ),
     },
@@ -111,9 +113,9 @@ export default function VendorDashboard() {
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none">
       
       {/* Greetings banner */}
-      <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden select-none">
+      <div className="bg-rose-600 bg-gradient-to-br from-rose-600 via-rose-700 to-rose-800 text-white rounded-3xl p-6 sm:p-8 shadow-lift relative overflow-hidden select-none">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#d4af37_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
-        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-emerald-700/25 blur-3xl" />
+        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-gold-500/20 blur-3xl" />
         
         <div className="relative space-y-2.5">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-400/10 text-gold-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-gold-500/25">
@@ -122,7 +124,7 @@ export default function VendorDashboard() {
           <h1 className="font-serif text-3xl font-bold tracking-tight">
             Assalam-o-Alaikum, {profile?.full_name || 'Vendor Host'}!
           </h1>
-          <p className="text-emerald-100/80 text-sm font-light max-w-xl leading-relaxed">
+          <p className="text-rose-100/85 text-sm font-light max-w-xl leading-relaxed">
             Monitor incoming banquet requests, manage listed halls, and evaluate seasonal revenue forecasts.
           </p>
         </div>
@@ -158,8 +160,8 @@ export default function VendorDashboard() {
         <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:shadow-md transition">
           <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600"><HelpCircle className="h-6 w-6" /></div>
           <div>
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-wider block">Total Enquiries</span>
-            <h3 className="text-xl font-bold text-stone-850 mt-0.5">{stats.totalEnquiries}</h3>
+            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-wider block">Under Review</span>
+            <h3 className="text-xl font-bold text-stone-850 mt-0.5">{stats.venuesUnderReview}</h3>
           </div>
         </div>
 

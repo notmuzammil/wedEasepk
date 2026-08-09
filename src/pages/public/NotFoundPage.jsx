@@ -19,12 +19,12 @@ const NotFoundPage = () => {
           404
         </span>
         <div className="absolute inset-0 flex items-center justify-center">
-          <Search className="h-14 w-14 text-emerald-800/40" />
+          <Search className="h-14 w-14 text-rose-700/40" />
         </div>
       </div>
 
       {/* Message */}
-      <h1 className="font-serif text-3xl font-bold text-emerald-950 sm:text-4xl">
+      <h1 className="font-serif text-3xl font-bold text-stone-900 sm:text-4xl">
         Page Not Found
       </h1>
       <p className="mt-3 max-w-md text-stone-500 text-sm leading-relaxed">
@@ -43,7 +43,7 @@ const NotFoundPage = () => {
         </button>
         <Link
           to="/"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-900 transition-colors"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors"
         >
           <Home className="h-4 w-4" />
           Back to Home

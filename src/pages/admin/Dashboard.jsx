@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Users, Store, Calendar, ShieldAlert, Sparkles, Check, X, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
@@ -11,7 +12,9 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 
-const CHART_COLORS = ['#e11d48', '#0F4C3A', '#D4AF37', '#2563eb', '#7c3aed', '#db2777'];
+// Categorical series colours, drawn from the brand palette so the charts sit
+// in the same world as the rest of the UI.
+const CHART_COLORS = ['#d12463', '#14503b', '#d4af37', '#f45b46', '#78183c', '#2b9d70'];
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
@@ -21,7 +24,6 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [venues, setVenues] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [pendingVendors, setPendingVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actioningId, setActioningId] = useState(null);
 
@@ -48,15 +50,6 @@ export default function AdminDashboard() {
         .select('*');
       if (bErr) throw bErr;
       setBookings(bookingList || []);
-
-      // 4. Fetch pending vendors
-      const { data: pendingList, error: pErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'pending_vendor');
-      if (pErr) throw pErr;
-      setPendingVendors(pendingList || []);
-
     } catch (err) {
       console.error('Error fetching admin data:', err);
     } finally {
@@ -68,19 +61,25 @@ export default function AdminDashboard() {
     fetchAllData();
   }, []);
 
+  // Listings waiting on an admin decision
+  const pendingListings = useMemo(
+    () => venues.filter(v => v.status === 'pending_approval' || v.status === 'pending'),
+    [venues]
+  );
+
   // Stats
-  const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const totalVenues = venues.length;
-    const totalBookings = bookings.length;
+  const stats = useMemo(() => ({
+    totalUsers:    users.length,
+    totalVenues:   venues.length,
+    totalBookings: bookings.length,
+    totalPending:  pendingListings.length,
+  }), [users, venues, bookings, pendingListings]);
 
-    // Pending approvals sum (pending venues + pending vendors)
-    const pendingVenuesCount = venues.filter(v => v.status === 'pending_approval' || v.status === 'pending').length;
-    const pendingVendorsCount = pendingVendors.length;
-    const totalPending = pendingVenuesCount + pendingVendorsCount;
-
-    return { totalUsers, totalVenues, totalBookings, totalPending };
-  }, [users, venues, bookings, pendingVendors]);
+  const vendorNameById = useMemo(() => {
+    const map = {};
+    users.forEach(u => { map[u.id] = u.full_name; });
+    return map;
+  }, [users]);
 
   // Analytics: Bookings per month (last 6 months)
   const monthlyChartData = useMemo(() => {
@@ -121,40 +120,24 @@ export default function AdminDashboard() {
     }));
   }, [venues]);
 
-  // Vendor approvals handler
-  const handleApproveVendor = async (vendorId) => {
-    setActioningId(vendorId);
+  // Approve / reject a venue listing straight from the overview
+  const handleListingDecision = async (venueId, nextStatus, message) => {
+    setActioningId(venueId);
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'vendor' })
-        .eq('id', vendorId);
+        .from('venues')
+        .update({ status: nextStatus })
+        .eq('id', venueId);
 
       if (error) throw error;
-      showToast('Vendor account approved and activated!', 'success');
-      setPendingVendors(prev => prev.filter(v => v.id !== vendorId));
+
+      showToast(message, 'success');
+      setVenues(prev => prev.map(v => (v.id === venueId ? { ...v, status: nextStatus } : v)));
       queryClient.invalidateQueries({ queryKey: ['pending-venues'] });
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
+      queryClient.invalidateQueries({ queryKey: ['venues-list'] });
     } catch (err) {
-      showToast(err.message || 'Approval failed', 'error');
-    } finally {
-      setActioningId(null);
-    }
-  };
-
-  const handleDeclineVendor = async (vendorId) => {
-    setActioningId(vendorId);
-    try {
-      // Decline: set back to customer or delete profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'customer' })
-        .eq('id', vendorId);
-
-      if (error) throw error;
-      showToast('Vendor registration declined.', 'success');
-      setPendingVendors(prev => prev.filter(v => v.id !== vendorId));
-    } catch (err) {
-      showToast(err.message || 'Decline failed', 'error');
+      showToast(err.message || 'Listing update failed', 'error');
     } finally {
       setActioningId(null);
     }
@@ -173,16 +156,16 @@ export default function AdminDashboard() {
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none font-sans">
       
       {/* Greetings banner */}
-      <div className="bg-gradient-to-br from-stone-900 to-stone-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#e11d48_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
-        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-rose-500/10 blur-3xl" />
+      <div className="bg-rose-600 bg-gradient-to-br from-rose-600 via-rose-700 to-rose-800 text-white rounded-3xl p-6 sm:p-8 shadow-lift relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
+        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-gold-500/20 blur-3xl" />
         
         <div className="relative space-y-2.5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-600/15 text-rose-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-rose-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 text-gold-300 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/20">
             <Sparkles className="h-3 w-3 fill-rose-500/20" /> Platform Controller
           </span>
           <h1 className="font-serif text-3xl font-bold tracking-tight">WedEase Central Admin</h1>
-          <p className="text-stone-300 text-sm font-light max-w-xl leading-relaxed">
+          <p className="text-rose-100/85 text-sm font-light max-w-xl leading-relaxed">
             Oversee user directories, coordinate banquet listing approvals, and review market volume parameters.
           </p>
         </div>
@@ -239,10 +222,10 @@ export default function AdminDashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyChartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} allowDecimals={false} />
-                <Tooltip cursor={{ fill: '#f5f5f5' }} />
-                <Bar dataKey="Bookings" fill="#e11d48" radius={[4, 4, 0, 0]} />
+                <XAxis dataKey="month" stroke="#ab9985" fontSize={11} tickLine={false} />
+                <YAxis stroke="#ab9985" fontSize={11} tickLine={false} allowDecimals={false} />
+                <Tooltip cursor={{ fill: '#f8f2ec' }} />
+                <Bar dataKey="Bookings" fill="#d12463" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -283,49 +266,59 @@ export default function AdminDashboard() {
 
       </div>
 
-      {/* ── PENDING VENDORS APPROVAL LIST ───────────────────────────── */}
+      {/* ── LISTINGS AWAITING REVIEW ─────────────────────────────────── */}
       <div className="space-y-4">
-        <h3 className="font-serif text-lg font-bold text-stone-900 border-b border-stone-100 pb-3">Pending Vendor Applications</h3>
-        
-        {pendingVendors.length > 0 ? (
+        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <h3 className="font-serif text-lg font-bold text-stone-900">Listings Awaiting Review</h3>
+          <Link to="/admin/venues" className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline transition">
+            Manage all listings
+          </Link>
+        </div>
+
+        {pendingListings.length > 0 ? (
           <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs md:text-sm text-stone-700">
                 <thead className="bg-stone-50 text-[10px] font-bold text-stone-400 uppercase tracking-widest border-b border-stone-200">
                   <tr>
-                    <th className="px-6 py-4">Vendor Name</th>
-                    <th className="px-6 py-4">Phone Number</th>
+                    <th className="px-6 py-4">Venue</th>
+                    <th className="px-6 py-4">Submitted By</th>
                     <th className="px-6 py-4">Submission Date</th>
-                    <th className="px-6 py-4">Verification Actions</th>
+                    <th className="px-6 py-4">Review Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {pendingVendors.map((vendor) => (
-                    <tr key={vendor.id} className="hover:bg-rose-50/10 transition-colors">
+                  {pendingListings.map((venue) => (
+                    <tr key={venue.id} className="hover:bg-rose-50/10 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-stone-850">{vendor.full_name || 'Anonymous Vendor'}</div>
+                        <div className="font-semibold text-stone-850">{venue.name || 'Untitled venue'}</div>
+                        <div className="text-[10px] text-stone-400 font-bold capitalize mt-0.5">
+                          {[venue.type, venue.city].filter(Boolean).join(' · ')}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-stone-700">{vendor.phone || vendor.phone_number || 'TBD'}</div>
+                        <div className="font-semibold text-stone-700">
+                          {vendorNameById[venue.vendor_id] || 'Vendor'}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-stone-500">{formatDate(vendor.created_at)}</div>
+                        <div className="font-medium text-stone-500">{formatDate(venue.created_at)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleApproveVendor(vendor.id)}
-                            disabled={actioningId === vendor.id}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm shadow-emerald-600/10 transition inline-flex items-center gap-1"
+                            onClick={() => handleListingDecision(venue.id, 'live', 'Listing is now live.')}
+                            disabled={actioningId === venue.id}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm shadow-emerald-600/10 transition inline-flex items-center gap-1 disabled:opacity-50"
                           >
                             <Check size={10} /> Approve
                           </button>
                           <button
-                            onClick={() => handleDeclineVendor(vendor.id)}
-                            disabled={actioningId === vendor.id}
-                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm shadow-red-600/10 transition inline-flex items-center gap-1"
+                            onClick={() => handleListingDecision(venue.id, 'suspended', 'Listing rejected.')}
+                            disabled={actioningId === venue.id}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm shadow-red-600/10 transition inline-flex items-center gap-1 disabled:opacity-50"
                           >
-                            <X size={10} /> Decline
+                            <X size={10} /> Reject
                           </button>
                         </div>
                       </td>
@@ -337,7 +330,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="bg-white border border-dashed border-stone-250 p-8 rounded-3xl text-center text-xs text-stone-400 select-none">
-            No active pending vendor applications under review.
+            No listings are waiting for review. You're all caught up.
           </div>
         )}
       </div>

@@ -66,10 +66,9 @@ export function Toast() {
       role="alert"
       aria-live="polite"
       className={`
-        fixed bottom-6 right-6 z-[9999] w-full max-w-sm
-        flex items-start gap-3 p-4 rounded-xl border shadow-xl
-        ${cfg.bg}
-        animate-in slide-in-from-right-4 fade-in-0 duration-300
+        fixed bottom-6 right-6 z-[9999] w-[calc(100%-3rem)] max-w-sm
+        flex items-start gap-3 p-4 rounded-xl border shadow-xl overflow-hidden
+        ${cfg.bg} toast-enter
       `}
     >
       {/* Icon */}
@@ -106,6 +105,16 @@ export function Toast() {
           to   { width: 0%; }
         }
         .animate-shrink { animation: shrink linear forwards; }
+
+        @keyframes toastIn {
+          from { opacity: 0; transform: translateX(1rem); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .toast-enter { animation: toastIn 0.25s ease-out both; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .toast-enter, .animate-shrink { animation: none; }
+        }
       `}</style>
     </div>
   );

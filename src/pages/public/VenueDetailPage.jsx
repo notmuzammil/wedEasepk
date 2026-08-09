@@ -63,7 +63,7 @@ export default function VenueDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const showToast = useUiStore((state) => state.showToast);
-  const { session, profile } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
 
   const { data: venue, isLoading, isError } = useVenueDetail(id);
   const { data: bookings } = useVenueAvailability(id);
@@ -150,15 +150,32 @@ export default function VenueDetailPage() {
     });
   }, [bookings, selectedDate, selectedEndDate, selectedSlot]);
 
-  // Images list
+  // Images list — cover photo first, then the vendor's chosen display order.
   const gallery = useMemo(() => {
-    if (!venue) return [];
-    const imgs = venue.venue_images || venue.images || [];
-    if (imgs.length === 0) return [FALLBACK_IMAGE];
-    return imgs.map(img =>
-      typeof img === 'string' ? img : img.storage_path || img.url || FALLBACK_IMAGE
-    );
+    if (!venue) return [FALLBACK_IMAGE];
+
+    const rows = Array.isArray(venue.venue_images) ? venue.venue_images : [];
+    const fromRelation = [...rows]
+      .sort((a, b) =>
+        (b.is_cover === true) - (a.is_cover === true) ||
+        (a.display_order ?? 0) - (b.display_order ?? 0)
+      )
+      .map(img => img.storage_path)
+      .filter(Boolean);
+
+    if (fromRelation.length > 0) return fromRelation;
+
+    const legacy = Array.isArray(venue.images)
+      ? venue.images.filter(img => typeof img === 'string' && img)
+      : [];
+
+    return legacy.length > 0 ? legacy : [FALLBACK_IMAGE];
   }, [venue]);
+
+  // Keep the selected slide in range if the gallery changes underneath us.
+  useEffect(() => {
+    setActiveImageIndex(prev => (prev < gallery.length ? prev : 0));
+  }, [gallery.length]);
 
   // Image Navigation
   const prevImage = (e) => {
@@ -231,11 +248,18 @@ export default function VenueDetailPage() {
     }
   };
 
-  // Maps URL Generator
-  const mapSearchQuery = useMemo(() => {
+  // Address parts, de-duplicated — vendors without a distinct area have it
+  // mirrored from city, which would otherwise read "Karachi, Karachi".
+  const fullAddress = useMemo(() => {
     if (!venue) return '';
-    return encodeURIComponent(`${venue.address || ''}, ${venue.area || ''}, ${venue.city || ''}`);
+    return [...new Set([venue.address, venue.area, venue.city].filter(Boolean))].join(', ');
   }, [venue]);
+
+  // Maps URL Generator
+  const mapSearchQuery = useMemo(
+    () => (fullAddress ? encodeURIComponent(fullAddress) : ''),
+    [fullAddress]
+  );
 
   const mapIframeUrl = useMemo(() => {
     if (!mapSearchQuery) return '';
@@ -275,7 +299,7 @@ export default function VenueDetailPage() {
   return (
     <div className="bg-stone-50 min-h-screen pb-20 font-sans text-stone-850">
       {/* ── 1. BREADCRUMBS & TOP BAR ─────────────────────────────────────── */}
-      <div className="bg-white border-b border-rose-100/50 sticky top-[64px] z-30 select-none">
+      <div className="bg-white border-b border-rose-100/50 sticky top-[var(--nav-h)] z-30 select-none">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
             onClick={() => navigate(-1)} 
@@ -325,14 +349,14 @@ export default function VenueDetailPage() {
             <>
               <button
                 onClick={prevImage}
-                className="absolute left-4 top-50% -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100"
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100"
                 aria-label="Prev image"
               >
                 <ChevronLeft size={20} />
               </button>
               <button
                 onClick={nextImage}
-                className="absolute right-4 top-50% -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100"
                 aria-label="Next image"
               >
                 <ChevronRight size={20} />
@@ -397,7 +421,7 @@ export default function VenueDetailPage() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-stone-500">
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
-                <span>{[venue.address, venue.area, venue.city].filter(Boolean).join(', ')}</span>
+                <span>{fullAddress}</span>
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
@@ -596,7 +620,7 @@ export default function VenueDetailPage() {
 
         {/* RIGHT COLUMN: BOOKING WIDGET */}
         <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-[130px] space-y-6">
+          <div className="lg:sticky lg:top-[calc(var(--nav-h)+var(--subnav-h))] space-y-6">
             
             {/* Booking Card Widget */}
             <div className="bg-white rounded-3xl border border-rose-100 shadow-xl overflow-hidden">
@@ -627,7 +651,7 @@ export default function VenueDetailPage() {
               <div className="p-6">
                 
                 {/* Authenticated Customer Form */}
-                {!session ? (
+                {!isAuthenticated ? (
                   <div className="text-center py-6 space-y-4">
                     <p className="text-stone-500 text-xs">You must be logged in with a Customer profile to place booking requests.</p>
                     <Link

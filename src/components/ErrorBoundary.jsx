@@ -48,7 +48,7 @@ export class ErrorBoundary extends React.Component {
           </p>
         </div>
 
-        {process.env.NODE_ENV === 'development' && this.state.error && (
+        {import.meta.env.DEV && this.state.error && (
           <pre className="max-w-lg overflow-auto rounded-lg bg-stone-100 p-4 text-left text-xs text-stone-700">
             {this.state.error.toString()}
           </pre>
@@ -56,7 +56,7 @@ export class ErrorBoundary extends React.Component {
 
         <button
           onClick={this.handleReset}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-900 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors"
         >
           <RefreshCw className="h-4 w-4" />
           Try Again

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import {
 import { useVenueDetail, useUpdateVenue } from '../../hooks/useVenues';
 import { useAuthStore } from '../../store/authStore';
 import { useUiStore } from '../../store/uiStore';
-import { PAKISTAN_CITIES, AMENITIES } from '../../utils/constants';
+import { PAKISTAN_CITIES, AMENITIES, VENUE_TYPES } from '../../utils/constants';
 import { uploadVenueImage } from '../../services/venueService';
 import { supabase } from '../../lib/supabaseClient';
 import { Input } from '../../components/ui/Input';
@@ -21,6 +21,9 @@ import { Spinner } from '../../components/ui/Spinner';
 // Validation Schema for steps
 const step1Schema = z.object({
   name: z.string().min(3, 'Venue name must be at least 3 characters'),
+  type: z.enum(['hall', 'marquee', 'banquet', 'lawn'], {
+    errorMap: () => ({ message: 'Please choose a venue type' }),
+  }),
   city: z.string().min(1, 'Please select a city'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
   description: z.string().min(20, 'Description must be at least 20 characters'),
@@ -67,7 +70,7 @@ export default function EditVenue() {
     getValues: getValues1,
   } = useForm({
     resolver: zodResolver(step1Schema),
-    defaultValues: { name: '', city: 'Karachi', address: '', description: '' }
+    defaultValues: { name: '', type: 'hall', city: 'Karachi', address: '', description: '' }
   });
 
   const {
@@ -84,10 +87,19 @@ export default function EditVenue() {
 
   const watchAmenities = watch2('amenities', []);
 
+  // Object URLs must be created once per file and revoked, otherwise every
+  // re-render leaks another blob reference.
+  const previews = useMemo(
+    () => imageFiles.map((file) => URL.createObjectURL(file)),
+    [imageFiles]
+  );
+  useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews]);
+
   // Pre-fill form values when data loads
   useEffect(() => {
     if (venue) {
       setValue1('name', venue.name || '');
+      setValue1('type', venue.type || 'hall');
       setValue1('city', venue.city || 'Karachi');
       setValue1('address', venue.address || '');
       setValue1('description', venue.description || '');
@@ -187,21 +199,21 @@ export default function EditVenue() {
       ];
 
       // 2. Update Venue Space listing
+      const capacityMax = parseInt(values2.capacityMax, 10);
       await updateVenueMutation.mutateAsync({
         id,
         data: {
           name: values1.name,
+          type: values1.type,
           city: values1.city,
           address: values1.address,
-          area: values1.city, // fallback
+          area: venue.area || values1.city,
           description: values1.description,
           capacity_min: parseInt(values2.capacityMin || 50, 10),
-          capacity_max: parseInt(values2.capacityMax, 10),
+          capacity_max: capacityMax,
+          // `capacity` mirrors capacity_max for the legacy single-capacity column.
+          capacity: capacityMax,
           price_per_day: parseInt(values2.pricePerDay, 10),
-          // Duplicate columns for compatibility
-          capacity: parseInt(values2.capacityMax, 10),
-          price_per_plate: parseInt(values2.pricePerDay, 10),
-          min_spending: parseInt(values2.pricePerDay, 10),
           amenities: values2.amenities,
           images: allUrls, // array column fallback
           status: 'pending_approval', // critical edits re-approve
@@ -323,7 +335,8 @@ export default function EditVenue() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Venue Name *" placeholder="Banquet Lawn name" error={errors1.name?.message} {...register1('name')} id="edit-venue-name" />
-            <Select label="City Location *" options={PAKISTAN_CITIES.map(c => ({ value: c, label: c }))} error={errors1.city?.message} {...register1('city')} id="edit-venue-city" />
+            <Select label="Venue Type *" options={VENUE_TYPES} placeholder="" error={errors1.type?.message} {...register1('type')} id="edit-venue-type" />
+            <Select label="City Location *" options={PAKISTAN_CITIES.map(c => ({ value: c, label: c }))} placeholder="" error={errors1.city?.message} {...register1('city')} id="edit-venue-city" />
           </div>
 
           <Input label="Street Address *" placeholder="Plot and street details" error={errors1.address?.message} {...register1('address')} id="edit-venue-address" />
@@ -449,7 +462,7 @@ export default function EditVenue() {
               dragActive ? 'border-rose-500 bg-rose-50/10' : 'border-stone-300 bg-stone-50 hover:bg-stone-100/50'
             }`}
           >
-            <UploadCloud size={36} className="text-stone-400 stroke-1.5" />
+            <UploadCloud size={36} strokeWidth={1.5} className="text-stone-400" />
             <div className="space-y-1">
               <span className="block text-xs font-bold text-stone-850">Drag and drop additional photos</span>
               <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" id="edit-file-input" />
@@ -466,11 +479,11 @@ export default function EditVenue() {
               <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider">New photos to upload</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {imageFiles.map((file, idx) => {
-                  const url = URL.createObjectURL(file);
+                  const url = previews[idx];
                   const absoluteIdx = existingImages.length + idx;
                   return (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={`${file.name}-${idx}`}
                       className={`relative aspect-video rounded-xl overflow-hidden bg-stone-100 border-2 transition ${
                         coverIndex === absoluteIdx ? 'border-rose-500 shadow ring-2 ring-rose-500/10' : 'border-stone-200'
                       }`}

@@ -22,8 +22,6 @@ import {
  *
  * @returns {{ user, profile, role, isLoading, isAuthenticated }}
  */
-let isAuthSetupStarted = false;
-
 export function useAuth() {
   const {
     user,
@@ -37,9 +35,6 @@ export function useAuth() {
   } = useAuthStore();
 
   useEffect(() => {
-    if (isAuthSetupStarted) return;
-    isAuthSetupStarted = true;
-
     let isMounted = true;
 
     // Explicitly set isLoading = true on mount
@@ -61,7 +56,7 @@ export function useAuth() {
         const profileData = await fetchProfile(session.user.id);
         // Store profile (with role) in the Zustand store
         if (isMounted) setProfile(profileData);
-      } catch (err) {
+      } catch {
         // Profile may not exist yet (e.g. during email confirmation)
         if (isMounted) setProfile(null);
       } finally {
@@ -89,7 +84,6 @@ export function useAuth() {
     return () => {
       isMounted = false;
       subscription.unsubscribe();
-      isAuthSetupStarted = false;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

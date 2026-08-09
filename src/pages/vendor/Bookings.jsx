@@ -80,7 +80,7 @@ export default function Bookings() {
       const matchSearch = !searchQuery ||
         b.venue?.name?.toLowerCase().includes(q) ||
         b.customer?.full_name?.toLowerCase().includes(q) ||
-        b.customer?.phone_number?.includes(q);
+        b.customer?.phone?.includes(q);
 
       return matchStatus && matchSearch;
     });
@@ -120,7 +120,7 @@ export default function Bookings() {
       render: (row) => (
         <div>
           <div className="font-semibold text-stone-800">{row.customer?.full_name || 'Client'}</div>
-          <div className="text-[10px] text-stone-400 font-medium">{row.customer?.phone_number || row.customer?.phone || 'No phone'}</div>
+          <div className="text-[10px] text-stone-400 font-medium">{row.customer?.phone || 'No phone'}</div>
         </div>
       ),
     },

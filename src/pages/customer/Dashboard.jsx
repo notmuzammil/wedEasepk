@@ -45,7 +45,7 @@ const UpcomingCard = ({ booking }) => {
   return (
     <div className="flex items-start gap-4 bg-white rounded-xl border border-stone-200 p-4 hover:shadow-sm transition-shadow">
       {/* Date pill */}
-      <div className="flex flex-col items-center justify-center bg-emerald-800 text-white rounded-lg px-3 py-2 min-w-[52px] text-center">
+      <div className="flex flex-col items-center justify-center bg-rose-600 text-white rounded-lg px-3 py-2 min-w-[52px] text-center">
         <span className="text-lg font-black leading-none">{day}</span>
         <span className="text-[10px] font-semibold tracking-wider">{month}</span>
       </div>
@@ -80,11 +80,11 @@ const RecentlyViewedSection = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-xl font-bold text-emerald-950 flex items-center gap-2">
+        <h2 className="font-serif text-xl font-bold text-stone-900 flex items-center gap-2">
           <Heart className="h-5 w-5 text-rose-400" />
           Recently Viewed
         </h2>
-        <Link to="/venues" className="text-xs font-semibold text-emerald-800 hover:underline flex items-center gap-1">
+        <Link to="/venues" className="text-xs font-semibold text-rose-700 hover:underline flex items-center gap-1">
           Browse all <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
@@ -104,15 +104,15 @@ const RecentlyViewedSection = () => {
                 loading="lazy"
               />
             ) : (
-              <div className="h-28 w-full bg-emerald-50 flex items-center justify-center">
-                <MapPin className="h-8 w-8 text-emerald-300" />
+              <div className="h-28 w-full bg-rose-50 flex items-center justify-center">
+                <MapPin className="h-8 w-8 text-rose-300" />
               </div>
             )}
             <div className="p-3">
               <p className="font-semibold text-stone-900 text-sm truncate">{v.name}</p>
               <p className="text-xs text-stone-500">{v.city}</p>
               {v.price_per_day && (
-                <p className="text-xs font-bold text-emerald-700 mt-1">{formatPKR(v.price_per_day)} / day</p>
+                <p className="text-xs font-bold text-rose-700 mt-1">{formatPKR(v.price_per_day)} / day</p>
               )}
             </div>
           </Link>
@@ -141,12 +141,12 @@ const QuickSearch = () => {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search venues by name or city…"
-          className="w-full pl-9 pr-4 py-2.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700 transition-colors bg-white"
+          className="w-full pl-9 pr-4 py-2.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 transition-colors bg-white"
         />
       </div>
       <button
         type="submit"
-        className="inline-flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+        className="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm"
       >
         <Search className="h-4 w-4" />
         Search
@@ -181,9 +181,9 @@ const CustomerDashboard = () => {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
 
       {/* ── Hero Banner ── */}
-      <div className="bg-emerald-800 text-white rounded-2xl p-6 md:p-8 shadow-lg relative overflow-hidden">
+      <div className="bg-rose-600 bg-gradient-to-br from-rose-600 via-rose-700 to-rose-800 text-white rounded-2xl p-6 md:p-8 shadow-lift relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:18px_18px]" />
-        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-emerald-700/40" />
+        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-rose-500/40" />
         <div className="absolute -right-4 -bottom-6 h-28 w-28 rounded-full bg-gold-500/10" />
 
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -195,8 +195,8 @@ const CustomerDashboard = () => {
               Assalam-o-Alaikum, {profile?.full_name?.split(' ')[0] || 'Guest'}!
             </h1>
             <p className="text-stone-300 text-sm font-light max-w-xl">
-              Welcome back to ShaadiSpaces. Manage your venue reservations, track payment
-              status, and discover new venues across Karachi.
+              Welcome back to WedEase. Manage your venue reservations, track payment
+              status, and discover new venues across Pakistan.
             </p>
           </div>
 
@@ -240,8 +240,8 @@ const CustomerDashboard = () => {
 
       {/* ── Quick Search ── */}
       <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 space-y-3">
-        <h2 className="font-serif text-lg font-bold text-emerald-950 flex items-center gap-2">
-          <Search className="h-5 w-5 text-emerald-700" />
+        <h2 className="font-serif text-lg font-bold text-stone-900 flex items-center gap-2">
+          <Search className="h-5 w-5 text-rose-600" />
           Find Your Perfect Venue
         </h2>
         <QuickSearch />
@@ -253,11 +253,11 @@ const CustomerDashboard = () => {
         {/* Upcoming Bookings */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-serif text-xl font-bold text-emerald-950 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-emerald-700" />
+            <h2 className="font-serif text-xl font-bold text-stone-900 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-rose-600" />
               Upcoming Bookings
             </h2>
-            <Link to="/my-bookings" className="text-xs font-semibold text-emerald-800 hover:underline flex items-center gap-1">
+            <Link to="/my-bookings" className="text-xs font-semibold text-rose-700 hover:underline flex items-center gap-1">
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -278,7 +278,7 @@ const CustomerDashboard = () => {
               <p className="text-stone-500 text-sm font-medium">No upcoming bookings yet.</p>
               <Link
                 to="/venues"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:underline"
               >
                 Browse venues <ArrowRight className="h-3 w-3" />
               </Link>
@@ -288,7 +288,7 @@ const CustomerDashboard = () => {
 
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 space-y-4 h-fit">
-          <h2 className="font-serif text-lg font-bold text-emerald-950">Quick Actions</h2>
+          <h2 className="font-serif text-lg font-bold text-stone-900">Quick Actions</h2>
           <div className="space-y-2">
             {[
               { to: '/venues', icon: Search, label: 'Browse Venues', sub: 'Find halls & lawns' },
@@ -298,16 +298,16 @@ const CustomerDashboard = () => {
               <Link
                 key={to}
                 to={to}
-                className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all group"
+                className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-rose-200 hover:bg-rose-50/40 transition-all group"
               >
-                <div className="bg-emerald-50 group-hover:bg-emerald-100 p-2 rounded-lg transition-colors">
-                  <Icon className="h-5 w-5 text-emerald-700" />
+                <div className="bg-rose-50 group-hover:bg-rose-100 p-2 rounded-lg transition-colors">
+                  <Icon className="h-5 w-5 text-rose-600" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-stone-800">{label}</p>
                   <p className="text-xs text-stone-500">{sub}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-stone-300 group-hover:text-emerald-700 group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="h-4 w-4 text-stone-300 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all" />
               </Link>
             ))}
           </div>

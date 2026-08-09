@@ -15,17 +15,12 @@ export async function signUpWithEmail(email, password, fullName, role = 'custome
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    // The handle_new_auth_user() trigger reads these to populate the profile
+    // row, so role and phone must travel with the signup — not be patched
+    // afterwards, which the anon user has no permission to do.
+    options: { data: { full_name: fullName, role, phone } },
   });
   if (error) throw error;
-
-  // Upsert profile so role + full_name + phone are correct even before email confirmation
-  if (data.user) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({ id: data.user.id, full_name: fullName, role, phone }, { onConflict: 'id' });
-    if (profileError) throw profileError;
-  }
 
   return data;
 }
@@ -34,15 +29,15 @@ export async function signInWithEmail(email, password) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
 
-  const { data: profile, error: profileError } = await supabase
+  // The profile is a convenience for the caller; useAuth() loads it properly.
+  // A missing row must not block an otherwise valid sign-in.
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', data.user.id)
-    .single();
+    .maybeSingle();
 
-  if (profileError) throw profileError;
-
-  return { ...data, profile };
+  return { ...data, profile: profile || null };
 }
 
 /**

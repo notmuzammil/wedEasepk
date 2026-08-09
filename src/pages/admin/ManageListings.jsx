@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Store, Search, Filter, Check, Ban, Eye, AlertCircle, Phone, ArrowLeft, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { formatDate } from '../../utils/formatDate';
 import { useUiStore } from '../../store/uiStore';
 import { formatCurrency } from '../../utils/formatDate';
 import DataTable from '../../components/shared/DataTable';

@@ -109,46 +109,46 @@ const AllBookings = () => {
           flex-wrap: wrap; gap: 16px; margin-bottom: 20px;
         }
         .ab-title {
-          font-size: 1.6rem; font-weight: 800; color: #111827; margin: 0 0 4px;
+          font-size: 1.6rem; font-weight: 800; color: var(--ink-900); margin: 0 0 4px;
           font-family: 'Playfair Display','Georgia',serif;
         }
-        .ab-sub { font-size: 0.875rem; color: #6b7280; margin: 0; }
+        .ab-sub { font-size: 0.875rem; color: var(--ink-600); margin: 0; }
         .ab-search-wrap { position: relative; }
-        .ab-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+        .ab-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-400); pointer-events: none; }
         .ab-search {
-          padding: 9px 14px 9px 36px; border: 1.5px solid #e5e7eb; border-radius: 10px;
-          font-size: 0.875rem; outline: none; width: 240px; background: #fafafa; transition: border-color 0.2s;
+          padding: 9px 14px 9px 36px; border: 1.5px solid var(--ink-200); border-radius: 10px;
+          font-size: 0.875rem; outline: none; width: 240px; background: var(--ink-50); transition: border-color 0.2s;
         }
-        .ab-search:focus { border-color: #e11d48; background: #fff; }
+        .ab-search:focus { border-color: var(--brand-600); background: #fff; }
 
         .ab-tabs {
-          display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #f1e8ec;
+          display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--ink-200);
           flex-wrap: wrap;
         }
         .ab-tab {
           display: flex; align-items: center; gap: 7px; padding: 9px 14px;
           border: none; background: none; font-size: 0.82rem; font-weight: 500;
-          color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent;
+          color: var(--ink-600); cursor: pointer; border-bottom: 2px solid transparent;
           margin-bottom: -1px; transition: all 0.15s; white-space: nowrap;
         }
-        .ab-tab:hover { color: #e11d48; }
-        .ab-tab--active { color: #e11d48; border-bottom-color: #e11d48; font-weight: 600; }
+        .ab-tab:hover { color: var(--brand-600); }
+        .ab-tab--active { color: var(--brand-600); border-bottom-color: var(--brand-600); font-weight: 600; }
         .ab-tab-count {
-          background: #fecdd3; color: #be123c; border-radius: 99px;
+          background: var(--brand-200); color: var(--brand-700); border-radius: 99px;
           font-size: 0.68rem; font-weight: 700; padding: 1px 6px; min-width: 16px; text-align: center;
         }
-        .ab-tab--active .ab-tab-count { background: #e11d48; color: #fff; }
+        .ab-tab--active .ab-tab-count { background: var(--brand-600); color: #fff; }
 
         .ab-list { display: flex; flex-direction: column; gap: 14px; }
         .ab-skeleton {
           height: 180px; border-radius: 16px;
-          background: linear-gradient(90deg,#f3f4f6,#e9ecef,#f3f4f6);
+          background: linear-gradient(90deg,var(--ink-100),var(--ink-150),var(--ink-100));
           background-size: 600px; animation: shimmer 1.4s infinite linear;
         }
         @keyframes shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
-        .ab-error { background:#fff5f5; border:1px solid #fecdd3; border-radius:12px; padding:20px; color:#be123c; text-align:center; }
+        .ab-error { background:var(--brand-50); border:1px solid var(--brand-200); border-radius:12px; padding:20px; color:var(--brand-700); text-align:center; }
         .ab-empty {
-          text-align:center; padding:60px 20px; color:#9ca3af;
+          text-align:center; padding:60px 20px; color:var(--ink-400);
           display:flex; flex-direction:column; align-items:center; gap:12px; font-size:0.875rem;
         }
 

@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/authStore';
 function LoadingSpinner() {
   return (
     <div className="flex h-screen w-full items-center justify-center bg-stone-50">
-      <span className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-800 border-t-transparent" />
+      <span className="h-10 w-10 animate-spin rounded-full border-4 border-rose-600 border-t-transparent" />
     </div>
   );
 }

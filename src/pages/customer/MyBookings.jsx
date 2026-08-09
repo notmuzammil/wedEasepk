@@ -19,22 +19,6 @@ const TABS = [
   { key: 'cancelled', label: 'Cancelled', icon: XCircle },
 ];
 
-const statusVariant = {
-  pending_approval: 'warning',
-  approved:         'success',
-  paid:             'success',
-  cancelled:        'danger',
-  rejected:         'danger',
-};
-
-const statusLabel = {
-  pending_approval: 'Pending',
-  approved:         'Approved',
-  paid:             'Paid',
-  cancelled:        'Cancelled',
-  rejected:         'Rejected',
-};
-
 // ─── Cancel Confirm Modal ─────────────────────────────────────────────────────
 const CancelModal = ({ isOpen, onClose, onConfirm, isPending }) => (
   <Modal isOpen={isOpen} onClose={onClose} title="Cancel Booking" size="sm">
@@ -115,7 +99,7 @@ const ReviewModal = ({ isOpen, onClose, booking }) => {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Tell others about your experience…"
-              className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700 resize-none"
+              className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 resize-none"
             />
           </div>
 
@@ -235,7 +219,7 @@ const MyBookings = () => {
 
       {/* Header */}
       <div>
-        <h1 className="font-serif text-3xl font-bold text-emerald-950">My Reservations</h1>
+        <h1 className="font-serif text-3xl font-bold text-stone-900">My Reservations</h1>
         <p className="text-stone-500 text-sm mt-1">
           Track status, upload receipts, and manage your booked wedding spaces.
         </p>
@@ -250,7 +234,7 @@ const MyBookings = () => {
             className={`
               inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 transition-colors
               ${activeTab === key
-                ? 'border-emerald-800 text-emerald-800 bg-emerald-50/50'
+                ? 'border-rose-600 text-rose-700 bg-rose-50/60'
                 : 'border-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-50'}
             `}
           >
@@ -258,7 +242,7 @@ const MyBookings = () => {
             {label}
             {counts[key] > 0 && (
               <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                activeTab === key ? 'bg-emerald-800 text-white' : 'bg-stone-200 text-stone-600'
+                activeTab === key ? 'bg-rose-600 text-white' : 'bg-stone-200 text-stone-600'
               }`}>
                 {counts[key]}
               </span>
@@ -275,7 +259,7 @@ const MyBookings = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by venue name or city…"
-          className="w-full pl-9 pr-4 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700 bg-white transition-colors"
+          className="w-full pl-9 pr-4 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 bg-white transition-colors"
         />
       </div>
 
@@ -310,7 +294,7 @@ const MyBookings = () => {
           {activeTab === 'all' && (
             <Link
               to="/venues"
-              className="inline-flex items-center justify-center bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center justify-center bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-colors"
             >
               Browse Venues
             </Link>

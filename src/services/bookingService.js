@@ -78,7 +78,7 @@ export const getVendorBookings = async (vendorId) => {
     .select(`
       *,
       venue:venues(id, name, address, area, city, price_per_plate, min_spending),
-      customer:profiles!bookings_customer_id_fkey(full_name, phone_number, email)
+      customer:profiles!bookings_customer_id_fkey(id, full_name, phone)
     `)
     .in('venue_id', venueIds)
     .order('created_at', { ascending: false });
@@ -94,7 +94,7 @@ export const getAllBookings = async () => {
     .select(`
       *,
       venue:venues(id, name, address, area, city, price_per_plate, min_spending),
-      customer:profiles!bookings_customer_id_fkey(full_name, phone_number, email)
+      customer:profiles!bookings_customer_id_fkey(id, full_name, phone)
     `)
     .order('created_at', { ascending: false });
 
@@ -140,6 +140,9 @@ export const cancelBooking = async (bookingId) => {
   return data;
 };
 
+// A year, in seconds — receipts stay reachable for the whole dispute window.
+const RECEIPT_URL_TTL_SECONDS = 60 * 60 * 24 * 365;
+
 // ─── Upload payment receipt ───────────────────────────────────────────────────
 export const uploadReceipt = async (bookingId, file, customerId) => {
   const fileExt = file.name.split('.').pop();
@@ -152,8 +155,14 @@ export const uploadReceipt = async (bookingId, file, customerId) => {
 
   if (uploadError) throw uploadError;
 
-  const { data } = supabase.storage.from('bookings').getPublicUrl(filePath);
-  const receiptUrl = data.publicUrl;
+  // Receipts hold payment details, so the bucket is private — hand out a
+  // signed URL rather than a public one.
+  const { data, error: signError } = await supabase.storage
+    .from('bookings')
+    .createSignedUrl(filePath, RECEIPT_URL_TTL_SECONDS);
+
+  if (signError) throw signError;
+  const receiptUrl = data.signedUrl;
 
   const { data: updatedBooking, error: updateError } = await supabase
     .from('bookings')

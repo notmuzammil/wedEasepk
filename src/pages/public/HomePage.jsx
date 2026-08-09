@@ -16,13 +16,14 @@ export default function HomePage() {
   const [date, setDate] = useState('');
   const [guests, setGuests] = useState('');
 
-  // Fetch approved venues for the featured list (slices to top 6)
-  const { data: venues, isLoading, isError } = useVenues({ status: 'approved' });
+  // Featured list (slices to top 6). No explicit status — the service already
+  // limits this to publicly visible venues ('live' and legacy 'approved').
+  const { data: venues, isLoading, isError } = useVenues();
   const featuredVenues = venues ? venues.slice(0, 6) : [];
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    
+
     // Clear and set filters in UI state store
     setFilters({
       query: city,
@@ -30,26 +31,33 @@ export default function HomePage() {
       capacity: guests ? parseInt(guests, 10) : ''
     });
 
-    // Navigate to listings
-    navigate(`/venues?city=${city}&date=${date}&guests=${guests}`);
+    // Only forward params the listing page actually understands.
+    const params = new URLSearchParams();
+    if (city) params.set('city', city);
+    if (guests) params.set('guests', guests);
+    navigate(`/venues${params.toString() ? `?${params}` : ''}`);
   };
 
   const handleQuickCitySelect = (cityName) => {
     setFilters({ query: cityName });
-    navigate(`/venues?city=${cityName}`);
+    navigate(`/venues?city=${encodeURIComponent(cityName)}`);
   };
 
   return (
     <div className="space-y-16 sm:space-y-24 bg-stone-50 pb-16">
       {/* ── 1. HERO SECTION ────────────────────────────────────────── */}
-      <section className="relative min-h-[90vh] flex items-center justify-center bg-gradient-to-br from-rose-50 via-rose-100/30 to-pink-100/50 px-4 sm:px-6 lg:px-8 py-20 overflow-hidden select-none">
+      <section className="relative min-h-[90vh] flex items-center justify-center bg-gradient-to-b from-rose-50 via-stone-50 to-stone-50 px-4 sm:px-6 lg:px-8 py-20 overflow-hidden select-none">
+        {/* Warm blush and gold light, blurred behind the content */}
+        <div className="absolute -top-32 -right-24 w-[32rem] h-[32rem] rounded-full bg-rose-200/40 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-40 -left-24 w-[28rem] h-[28rem] rounded-full bg-gold-200/35 blur-3xl pointer-events-none" />
+
         {/* Soft, elegant vector floral corner shapes */}
-        <div className="absolute top-0 right-0 w-80 h-80 text-rose-200/20 pointer-events-none transform translate-x-20 -translate-y-20">
+        <div className="absolute top-0 right-0 w-80 h-80 text-rose-300/25 pointer-events-none transform translate-x-20 -translate-y-20">
           <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
             <path d="M50 0 C60 25 75 40 100 50 C75 60 60 75 50 100 C40 75 25 60 0 50 C25 40 40 25 50 0 Z" />
           </svg>
         </div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 text-rose-200/20 pointer-events-none transform -translate-x-20 translate-y-20">
+        <div className="absolute bottom-0 left-0 w-80 h-80 text-gold-300/25 pointer-events-none transform -translate-x-20 translate-y-20">
           <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
             <path d="M50 0 C60 25 75 40 100 50 C75 60 60 75 50 100 C40 75 25 60 0 50 C25 40 40 25 50 0 Z" />
           </svg>
@@ -58,23 +66,23 @@ export default function HomePage() {
         <div className="max-w-5xl w-full text-center space-y-8 z-10 relative">
           <div className="space-y-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-600/10 text-rose-700 rounded-full text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="h-3 w-3 fill-rose-600/35" /> Karachi's Leading Venue Network
+              <Sparkles className="h-3 w-3 fill-rose-600/35" /> Pakistan's Leading Venue Network
             </span>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold text-stone-900 tracking-tight leading-none">
               Find Your Perfect <span className="text-rose-600">Wedding Venue</span>
             </h1>
-            <p className="font-serif text-xl sm:text-2xl text-stone-600 font-medium italic max-w-2xl mx-auto">
+            {/* <p className="font-serif text-xl sm:text-2xl text-stone-600 font-medium italic max-w-2xl mx-auto">
               خوابوں کی شادی کا آغاز، بہترین مقامات کے ساتھ
-            </p>
+            </p> */}
             <p className="text-stone-500 text-sm sm:text-base max-w-lg mx-auto font-light leading-relaxed">
               Browse top-rated banquet halls, premium lawns, and luxury marquees. Check availability, slot limits, and book instantly.
             </p>
           </div>
 
           {/* Core Horizontal Search Bar Form Panel */}
-          <form 
-            onSubmit={handleSearchSubmit} 
-            className="bg-white p-4 sm:p-5 rounded-3xl shadow-xl border border-rose-100 flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-stretch md:items-center"
+          <form
+            onSubmit={handleSearchSubmit}
+            className="bg-white/90 backdrop-blur-sm p-4 sm:p-5 rounded-3xl shadow-lift ring-1 ring-rose-100 flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-stretch md:items-center"
           >
             {/* City select */}
             <div className="flex-1 flex items-center gap-3 px-3 py-2 border-b md:border-b-0 md:border-r border-stone-200">
@@ -239,35 +247,35 @@ export default function HomePage() {
 
       {/* ── 5. STATS BAR ───────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-rose-600 to-pink-500 rounded-3xl p-8 sm:p-12 text-white shadow-xl flex flex-col sm:flex-row justify-around text-center gap-8 relative overflow-hidden select-none">
+        <div className="bg-rose-600 bg-gradient-to-br from-rose-600 via-pink-500 to-gold-400 rounded-3xl p-8 sm:p-12 text-white shadow-lift flex flex-col sm:flex-row justify-around text-center gap-8 relative overflow-hidden select-none">
           <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
           <div className="space-y-1 relative z-10">
             <h4 className="text-3xl sm:text-4xl font-serif font-bold">500+</h4>
-            <p className="text-xs text-rose-100 font-medium uppercase tracking-wider">Premium Venues</p>
+            <p className="text-xs text-white/85 font-medium uppercase tracking-wider">Premium Venues</p>
           </div>
           <div className="space-y-1 relative z-10">
             <h4 className="text-3xl sm:text-4xl font-serif font-bold">10,000+</h4>
-            <p className="text-xs text-rose-100 font-medium uppercase tracking-wider">Happy Couples</p>
+            <p className="text-xs text-white/85 font-medium uppercase tracking-wider">Happy Couples</p>
           </div>
           <div className="space-y-1 relative z-10">
             <h4 className="text-3xl sm:text-4xl font-serif font-bold">50+</h4>
-            <p className="text-xs text-rose-100 font-medium uppercase tracking-wider">Pakistani Cities</p>
+            <p className="text-xs text-white/85 font-medium uppercase tracking-wider">Pakistani Cities</p>
           </div>
         </div>
       </section>
 
       {/* ── 6. CTA BANNER (ARE YOU A HALL OWNER) ──────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-stone-900 border border-stone-850 rounded-3xl p-8 sm:p-12 text-stone-100 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+        <div className="bg-rose-950 ring-1 ring-gold-500/25 rounded-3xl p-8 sm:p-12 text-rose-100 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(#ffffff_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.02]" />
           <div className="space-y-3 relative z-10 max-w-xl text-center md:text-left">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 uppercase tracking-widest">
-              <Building2 className="h-4 w-4" /> Partner With ShaadiSpaces
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold-400 uppercase tracking-widest">
+              <Building2 className="h-4 w-4" /> Partner With WedEase
             </span>
             <h3 className="font-serif text-2xl sm:text-3xl font-bold">
               Are you a Hall or Venue Owner?
             </h3>
-            <p className="text-stone-400 text-xs sm:text-sm font-light leading-relaxed">
+            <p className="text-rose-200/85 text-xs sm:text-sm font-light leading-relaxed">
               List your banquet halls, lawns, or marquees on Pakistan's premier wedding portal. Coordinate bookings, secure online deposits, and manage schedules with our free admin workspace dashboard.
             </p>
           </div>

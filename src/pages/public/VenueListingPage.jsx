@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { MapPin, Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, LayoutList } from 'lucide-react';
 import { useVenuesList } from '../../hooks/useVenues';
 import VenueCard from '../../components/shared/VenueCard';
@@ -7,8 +7,11 @@ import VenueCardSkeleton from '../../components/shared/VenueCardSkeleton';
 import { PAKISTAN_CITIES, AMENITIES } from '../../utils/constants';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const PRICE_MIN = 50_000;
-const PRICE_MAX = 5_000_000;
+// Venues are listed with a per-day rental rate (see the vendor Add Venue form),
+// so the slider bounds have to cover that range rather than a per-plate one.
+const PRICE_MIN = 25_000;
+const PRICE_MAX = 2_000_000;
+const PRICE_STEP = 25_000;
 const CAPACITY_MIN = 50;
 const CAPACITY_MAX = 3000;
 const PAGE_LIMIT = 12;
@@ -32,10 +35,31 @@ function paramsToFilters(params) {
     query:       params.get('q')          || '',
     minPrice:    params.get('minPrice')   ? Number(params.get('minPrice'))   : PRICE_MIN,
     maxPrice:    params.get('maxPrice')   ? Number(params.get('maxPrice'))   : PRICE_MAX,
-    minCapacity: params.get('minCap')     ? Number(params.get('minCap'))     : CAPACITY_MIN,
+    // `guests` is what the home page hero search sends; `minCap` is our own.
+    minCapacity: params.get('minCap') || params.get('guests')
+      ? Number(params.get('minCap') || params.get('guests'))
+      : CAPACITY_MIN,
     amenities:   params.get('amenities')  ? params.get('amenities').split(',') : [],
     sort:        params.get('sort')       || 'newest',
     page:        params.get('page')       ? Number(params.get('page'))       : 1,
+  };
+}
+
+/**
+ * Strips filters that are still sitting at their default (i.e. "no opinion")
+ * value. Sending the slider defaults as real bounds would filter out every
+ * venue whose price or capacity falls outside the widget's arbitrary range.
+ */
+function filtersToQuery(filters) {
+  return {
+    city:        filters.city || undefined,
+    query:       filters.query || undefined,
+    minPrice:    filters.minPrice > PRICE_MIN ? filters.minPrice : undefined,
+    maxPrice:    filters.maxPrice < PRICE_MAX ? filters.maxPrice : undefined,
+    minCapacity: filters.minCapacity > CAPACITY_MIN ? filters.minCapacity : undefined,
+    amenities:   filters.amenities?.length ? filters.amenities : undefined,
+    sort:        filters.sort,
+    page:        filters.page,
   };
 }
 
@@ -65,18 +89,18 @@ function PriceSlider({ min, max, onMinChange, onMaxChange }) {
           type="range"
           min={PRICE_MIN}
           max={PRICE_MAX}
-          step={50_000}
+          step={PRICE_STEP}
           value={min}
-          onChange={e => onMinChange(Math.min(Number(e.target.value), max - 50_000))}
+          onChange={e => onMinChange(Math.min(Number(e.target.value), max - PRICE_STEP))}
           className="range-input range-input--min"
         />
         <input
           type="range"
           min={PRICE_MIN}
           max={PRICE_MAX}
-          step={50_000}
+          step={PRICE_STEP}
           value={max}
-          onChange={e => onMaxChange(Math.max(Number(e.target.value), min + 50_000))}
+          onChange={e => onMaxChange(Math.max(Number(e.target.value), min + PRICE_STEP))}
           className="range-input range-input--max"
         />
       </div>
@@ -162,7 +186,7 @@ function FilterPanel({ filters, draft, setDraft, onApply, onReset, isOpen, onClo
 
         {/* Price ─────────────────────────────────── */}
         <section className="filter-section">
-          <h3 className="filter-section-title">Price per plate</h3>
+          <h3 className="filter-section-title">Price per day</h3>
           <PriceSlider
             min={draft.minPrice}
             max={draft.maxPrice}
@@ -266,7 +290,6 @@ function Pagination({ page, totalPages, onPageChange }) {
 // ─── Main Page Component ──────────────────────────────────────────────────────
 export default function VenueListingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   // Sync state from URL
   const [filters, setFilters] = useState(() => paramsToFilters(searchParams));
@@ -283,7 +306,7 @@ export default function VenueListingPage() {
 
   // Fetch data
   const { data: result, isLoading, isFetching, isError } = useVenuesList({
-    ...filters,
+    ...filtersToQuery(filters),
     limit: PAGE_LIMIT,
   });
 
@@ -561,17 +584,17 @@ export default function VenueListingPage() {
         ──────────────────────────────────────────────────────── */
         .vlp-root {
           min-height: 100vh;
-          background: #fdf8f8;
+          background: var(--page);
           font-family: 'Inter', sans-serif;
         }
 
         /* ── Top Search Bar ─────────────────────────────────── */
         .vlp-top-bar {
           background: #fff;
-          border-bottom: 1px solid #f1e8ec;
+          border-bottom: 1px solid var(--ink-200);
           padding: 14px 0;
           position: sticky;
-          top: 64px;
+          top: var(--nav-h);
           z-index: 100;
         }
         .vlp-top-bar-inner {
@@ -591,21 +614,21 @@ export default function VenueListingPage() {
         .vlp-search-icon {
           position: absolute;
           left: 14px;
-          color: #9ca3af;
+          color: var(--ink-400);
           pointer-events: none;
         }
         .vlp-search-input {
           width: 100%;
           padding: 10px 40px 10px 42px;
-          border: 1.5px solid #e5e7eb;
+          border: 1.5px solid var(--ink-200);
           border-radius: 10px;
           font-size: 0.9rem;
           outline: none;
           transition: border-color 0.2s;
-          background: #f9fafb;
+          background: var(--ink-50);
         }
         .vlp-search-input:focus {
-          border-color: #e11d48;
+          border-color: var(--brand-600);
           background: #fff;
         }
         .vlp-search-clear {
@@ -614,7 +637,7 @@ export default function VenueListingPage() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #9ca3af;
+          color: var(--ink-400);
           display: flex;
           padding: 4px;
         }
@@ -623,7 +646,7 @@ export default function VenueListingPage() {
           align-items: center;
           gap: 7px;
           padding: 10px 16px;
-          border: 1.5px solid #e5e7eb;
+          border: 1.5px solid var(--ink-200);
           border-radius: 10px;
           background: #fff;
           font-size: 0.875rem;
@@ -634,12 +657,12 @@ export default function VenueListingPage() {
           position: relative;
         }
         .vlp-filter-toggle--active {
-          border-color: #e11d48;
-          color: #e11d48;
-          background: #fff5f7;
+          border-color: var(--brand-600);
+          color: var(--brand-600);
+          background: var(--brand-50);
         }
         .filter-badge {
-          background: #e11d48;
+          background: var(--brand-600);
           color: #fff;
           border-radius: 99px;
           font-size: 0.7rem;
@@ -663,9 +686,9 @@ export default function VenueListingPage() {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          background: #fff5f7;
-          color: #c21d47;
-          border: 1px solid #fecdd3;
+          background: var(--brand-50);
+          color: var(--brand-700);
+          border: 1px solid var(--brand-200);
           border-radius: 99px;
           padding: 4px 10px 4px 10px;
           font-size: 0.8rem;
@@ -675,7 +698,7 @@ export default function VenueListingPage() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #e11d48;
+          color: var(--brand-600);
           display: flex;
           padding: 0;
           margin-left: 2px;
@@ -683,7 +706,7 @@ export default function VenueListingPage() {
         .clear-all-chips {
           background: none;
           border: none;
-          color: #e11d48;
+          color: var(--brand-600);
           font-size: 0.8rem;
           font-weight: 500;
           cursor: pointer;
@@ -709,18 +732,18 @@ export default function VenueListingPage() {
           width: 272px;
           flex-shrink: 0;
           background: #fff;
-          border: 1px solid #f1e8ec;
+          border: 1px solid var(--ink-200);
           border-radius: 16px;
           padding: 20px;
           position: sticky;
-          top: 130px;
-          max-height: calc(100vh - 160px);
+          top: calc(var(--nav-h) + var(--subnav-h));
+          max-height: calc(100vh - var(--nav-h) - var(--subnav-h) - 24px);
           overflow-y: auto;
           scrollbar-width: thin;
-          scrollbar-color: #fecdd3 transparent;
+          scrollbar-color: var(--brand-200) transparent;
         }
         .filter-panel::-webkit-scrollbar { width: 4px; }
-        .filter-panel::-webkit-scrollbar-thumb { background: #fecdd3; border-radius: 4px; }
+        .filter-panel::-webkit-scrollbar-thumb { background: var(--brand-200); border-radius: 4px; }
 
         .filter-header {
           display: flex;
@@ -731,7 +754,7 @@ export default function VenueListingPage() {
         .filter-title {
           font-size: 0.95rem;
           font-weight: 600;
-          color: #1f2937;
+          color: var(--ink-900);
           display: flex;
           align-items: center;
           gap: 7px;
@@ -741,7 +764,7 @@ export default function VenueListingPage() {
         .filter-reset-btn {
           background: none;
           border: none;
-          color: #e11d48;
+          color: var(--brand-600);
           font-size: 0.8rem;
           cursor: pointer;
           white-space: nowrap;
@@ -751,20 +774,20 @@ export default function VenueListingPage() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #9ca3af;
+          color: var(--ink-400);
           display: flex;
           padding: 2px;
           display: none; /* hidden on desktop; shown on mobile */
         }
         .filter-section {
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid var(--ink-100);
           padding-top: 14px;
           margin-top: 14px;
         }
         .filter-section-title {
           font-size: 0.8rem;
           font-weight: 600;
-          color: #6b7280;
+          color: var(--ink-600);
           text-transform: uppercase;
           letter-spacing: 0.05em;
           margin: 0 0 10px 0;
@@ -779,19 +802,19 @@ export default function VenueListingPage() {
         .city-pill {
           padding: 5px 11px;
           border-radius: 99px;
-          border: 1.5px solid #e5e7eb;
-          background: #f9fafb;
+          border: 1.5px solid var(--ink-200);
+          background: var(--ink-50);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s;
           font-weight: 500;
-          color: #374151;
+          color: var(--ink-700);
         }
-        .city-pill:hover { border-color: #e11d48; color: #e11d48; }
+        .city-pill:hover { border-color: var(--brand-600); color: var(--brand-600); }
         .city-pill--active {
-          border-color: #e11d48;
-          background: #fff5f7;
-          color: #e11d48;
+          border-color: var(--brand-600);
+          background: var(--brand-50);
+          color: var(--brand-600);
         }
 
         /* Price/Capacity sliders */
@@ -801,7 +824,7 @@ export default function VenueListingPage() {
           justify-content: space-between;
           font-size: 0.8rem;
           font-weight: 600;
-          color: #374151;
+          color: var(--ink-700);
           margin-bottom: 8px;
         }
         .range-track { position: relative; }
@@ -811,7 +834,7 @@ export default function VenueListingPage() {
           appearance: none;
           height: 4px;
           border-radius: 99px;
-          background: linear-gradient(to right, #fecdd3, #e11d48);
+          background: linear-gradient(to right, var(--brand-200), var(--brand-600));
           outline: none;
           cursor: pointer;
           display: block;
@@ -822,9 +845,9 @@ export default function VenueListingPage() {
           width: 18px;
           height: 18px;
           border-radius: 50%;
-          background: #e11d48;
+          background: var(--brand-600);
           border: 2px solid #fff;
-          box-shadow: 0 1px 6px rgba(225,29,72,0.4);
+          box-shadow: 0 1px 6px rgba(209, 36, 99, 0.4);
           cursor: pointer;
         }
 
@@ -839,18 +862,18 @@ export default function VenueListingPage() {
         .amenity-checkbox {
           width: 16px;
           height: 16px;
-          accent-color: #e11d48;
+          accent-color: var(--brand-600);
           cursor: pointer;
           flex-shrink: 0;
         }
-        .amenity-label { font-size: 0.85rem; color: #374151; }
+        .amenity-label { font-size: 0.85rem; color: var(--ink-700); }
 
         /* Apply button */
         .apply-btn {
           margin-top: 18px;
           width: 100%;
           padding: 11px;
-          background: linear-gradient(135deg, #e11d48, #f43f5e);
+          background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
           color: #fff;
           border: none;
           border-radius: 10px;
@@ -872,11 +895,11 @@ export default function VenueListingPage() {
           flex-wrap: wrap;
           gap: 12px;
         }
-        .results-count { font-size: 0.9rem; color: #6b7280; margin: 0; }
-        .results-count strong { color: #111827; }
-        .results-city { color: #e11d48; font-weight: 600; }
-        .results-loading { color: #9ca3af; font-style: italic; }
-        .results-updating { color: #e11d48; font-size: 0.8rem; }
+        .results-count { font-size: 0.9rem; color: var(--ink-600); margin: 0; }
+        .results-count strong { color: var(--ink-900); }
+        .results-city { color: var(--brand-600); font-weight: 600; }
+        .results-loading { color: var(--ink-400); font-style: italic; }
+        .results-updating { color: var(--brand-600); font-size: 0.8rem; }
 
         .results-controls {
           display: flex;
@@ -885,35 +908,35 @@ export default function VenueListingPage() {
         }
 
         /* Sort */
-        .sort-label { font-size: 0.85rem; color: #6b7280; }
+        .sort-label { font-size: 0.85rem; color: var(--ink-600); }
         .sort-wrapper { display: flex; align-items: center; gap: 6px; }
         .sort-select-wrap { position: relative; }
         .sort-select {
           appearance: none;
           background: #fff;
-          border: 1.5px solid #e5e7eb;
+          border: 1.5px solid var(--ink-200);
           border-radius: 8px;
           padding: 7px 30px 7px 11px;
           font-size: 0.85rem;
-          color: #374151;
+          color: var(--ink-700);
           cursor: pointer;
           outline: none;
           font-weight: 500;
         }
-        .sort-select:focus { border-color: #e11d48; }
+        .sort-select:focus { border-color: var(--brand-600); }
         .sort-chevron {
           position: absolute;
           right: 9px;
           top: 50%;
           transform: translateY(-50%);
           pointer-events: none;
-          color: #9ca3af;
+          color: var(--ink-400);
         }
 
         /* View toggle */
         .view-toggle {
           display: flex;
-          border: 1.5px solid #e5e7eb;
+          border: 1.5px solid var(--ink-200);
           border-radius: 8px;
           overflow: hidden;
         }
@@ -922,13 +945,13 @@ export default function VenueListingPage() {
           border: none;
           padding: 7px 10px;
           cursor: pointer;
-          color: #9ca3af;
+          color: var(--ink-400);
           display: flex;
           align-items: center;
           transition: all 0.15s;
         }
-        .view-btn--active { background: #fff5f7; color: #e11d48; }
-        .view-btn:not(:last-child) { border-right: 1px solid #e5e7eb; }
+        .view-btn--active { background: var(--brand-50); color: var(--brand-600); }
+        .view-btn:not(:last-child) { border-right: 1px solid var(--ink-200); }
 
         /* Desktop sidebar toggle */
         .desktop-filter-btn {
@@ -936,16 +959,16 @@ export default function VenueListingPage() {
           align-items: center;
           gap: 6px;
           padding: 7px 13px;
-          border: 1.5px solid #e5e7eb;
+          border: 1.5px solid var(--ink-200);
           border-radius: 8px;
           background: #fff;
           font-size: 0.85rem;
           font-weight: 500;
           cursor: pointer;
-          color: #374151;
+          color: var(--ink-700);
           transition: all 0.2s;
         }
-        .desktop-filter-btn:hover { border-color: #e11d48; color: #e11d48; }
+        .desktop-filter-btn:hover { border-color: var(--brand-600); color: var(--brand-600); }
 
         /* ── Venues Grid ────────────────────────────────────── */
         .venues-grid {
@@ -964,12 +987,12 @@ export default function VenueListingPage() {
         .vlp-error {
           text-align: center;
           padding: 60px 20px;
-          color: #6b7280;
+          color: var(--ink-600);
         }
         .error-retry-btn {
           margin-top: 12px;
           padding: 10px 22px;
-          background: #e11d48;
+          background: var(--brand-600);
           color: #fff;
           border: none;
           border-radius: 8px;
@@ -981,14 +1004,14 @@ export default function VenueListingPage() {
         .vlp-empty {
           text-align: center;
           padding: 80px 20px;
-          color: #6b7280;
+          color: var(--ink-600);
         }
         .vlp-empty-icon { font-size: 3.5rem; margin-bottom: 12px; }
-        .vlp-empty h2 { font-size: 1.3rem; color: #1f2937; margin: 0 0 8px; }
+        .vlp-empty h2 { font-size: 1.3rem; color: var(--ink-900); margin: 0 0 8px; }
         .vlp-empty p { font-size: 0.9rem; margin: 0 0 20px; }
         .vlp-empty-reset {
           padding: 10px 22px;
-          background: #e11d48;
+          background: var(--brand-600);
           color: #fff;
           border: none;
           border-radius: 8px;
@@ -1010,10 +1033,10 @@ export default function VenueListingPage() {
         .page-btn {
           min-width: 38px;
           height: 38px;
-          border: 1.5px solid #e5e7eb;
+          border: 1.5px solid var(--ink-200);
           border-radius: 8px;
           background: #fff;
-          color: #374151;
+          color: var(--ink-700);
           font-size: 0.9rem;
           font-weight: 500;
           cursor: pointer;
@@ -1023,14 +1046,14 @@ export default function VenueListingPage() {
           transition: all 0.15s;
           padding: 0 4px;
         }
-        .page-btn:hover:not(:disabled) { border-color: #e11d48; color: #e11d48; }
+        .page-btn:hover:not(:disabled) { border-color: var(--brand-600); color: var(--brand-600); }
         .page-btn--active {
-          background: #e11d48;
-          border-color: #e11d48;
+          background: var(--brand-600);
+          border-color: var(--brand-600);
           color: #fff;
         }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .page-ellipsis { color: #9ca3af; padding: 0 4px; font-size: 0.9rem; }
+        .page-ellipsis { color: var(--ink-400); padding: 0 4px; font-size: 0.9rem; }
 
         /* ── Responsive ─────────────────────────────────────── */
         @media (max-width: 1024px) {

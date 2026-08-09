@@ -23,6 +23,14 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
+  // Close on Escape — expected of anything with aria-modal.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -41,8 +49,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
         aria-label={title}
         className={`
           relative z-10 w-full ${sizeMap[size]}
-          rounded-xl bg-white shadow-2xl
-          animate-in fade-in-0 zoom-in-95
+          rounded-xl bg-white shadow-2xl modal-enter
         `}
       >
         {/* Header */}
@@ -62,6 +69,17 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
           {children}
         </div>
       </div>
+
+      <style>{`
+        @keyframes modalIn {
+          from { opacity: 0; transform: scale(0.96); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        .modal-enter { animation: modalIn 0.18s ease-out both; }
+        @media (prefers-reduced-motion: reduce) {
+          .modal-enter { animation: none; }
+        }
+      `}</style>
     </div>
   );
 }

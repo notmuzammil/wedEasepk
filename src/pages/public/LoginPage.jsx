@@ -2,17 +2,39 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, Sparkles, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { loginSchema } from '../../utils/validators';
 import { useLogin } from '../../hooks/useAuth';
 import { useAuthStore } from '../../store/authStore';
-import { Input, Button } from '../../components/ui';
+import { Input, Button, LogoMark } from '../../components/ui';
+
+const DEFAULT_LANDING = {
+  customer: '/dashboard',
+  vendor:   '/vendor/dashboard',
+  admin:    '/admin/dashboard',
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const loginMutation = useLogin();
   const { isAuthenticated, profile } = useAuthStore();
+
+  /**
+   * Where to send the user after a successful sign-in. Honours both the
+   * router state set by ProtectedRoute and the ?redirect= query parameter
+   * used by the "Login to book" link on venue pages.
+   */
+  const resolveDestination = (role) => {
+    const fromState = location.state?.from?.pathname;
+    const fromQuery = new URLSearchParams(location.search).get('redirect');
+    // Only allow same-origin relative paths, never an absolute URL.
+    const candidate = fromState || fromQuery;
+    if (candidate && candidate.startsWith('/') && !candidate.startsWith('//')) {
+      return candidate;
+    }
+    return DEFAULT_LANDING[role] || '/';
+  };
 
   const {
     register,
@@ -22,45 +44,23 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Handle redirect on successful authentication
+  // Redirect anyone who is already signed in (including right after submit,
+  // once the auth listener has populated the profile).
   useEffect(() => {
     if (isAuthenticated && profile) {
-      const from = location.state?.from?.pathname;
-      if (from) {
-        navigate(from, { replace: true });
-      } else {
-        if (profile.role === 'customer') {
-          navigate('/dashboard', { replace: true });
-        } else if (profile.role === 'vendor') {
-          navigate('/vendor/dashboard', { replace: true });
-        } else if (profile.role === 'admin') {
-          navigate('/admin/dashboard', { replace: true });
-        }
-      }
+      navigate(resolveDestination(profile.role), { replace: true });
     }
-  }, [isAuthenticated, profile, navigate, location]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, profile, navigate]);
 
   const onSubmit = async (data) => {
     try {
-      const result = await loginMutation.mutateAsync({
+      await loginMutation.mutateAsync({
         email: data.email,
         password: data.password,
       });
-
-      const role = result?.profile?.role;
-      const from = location.state?.from?.pathname;
-      if (from) {
-        navigate(from, { replace: true });
-      } else {
-        if (role === 'customer') {
-          navigate('/dashboard', { replace: true });
-        } else if (role === 'vendor') {
-          navigate('/vendor/dashboard', { replace: true });
-        } else if (role === 'admin') {
-          navigate('/admin/dashboard', { replace: true });
-        }
-      }
-    } catch (err) {
+      // Navigation is handled by the effect above once the store updates.
+    } catch {
       // Ignored here because useLogin's onError handles the error toast
     }
   };
@@ -75,10 +75,10 @@ export default function LoginPage() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
 
         {/* Top Branding */}
-        <div className="relative z-10 flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-rose-200 fill-rose-100/20" />
+        <div className="relative z-10 flex items-center gap-2.5">
+          <LogoMark variant="inverse" className="h-10 w-10" />
           <span className="font-serif text-2xl font-bold tracking-wide">
-            Shaadi<span className="text-rose-200">Spaces</span>
+            Wed<span className="text-rose-200">Ease</span>
           </span>
         </div>
 
@@ -88,14 +88,13 @@ export default function LoginPage() {
             Platform for Premium Venues
           </span>
           
-          {/* Urdu Calligraphy / Tagline */}
-          <h1 className="font-serif text-4xl xl:text-5xl font-bold leading-relaxed text-right pr-4 border-r-2 border-rose-300/40">
-            خوابوں کی شادی کا آغاز، بہترین مقامات کے ساتھ
+          {/* Tagline */}
+          <h1 className="font-serif text-4xl xl:text-5xl font-bold leading-tight tracking-tight">
+            Find and book your perfect wedding venue.
           </h1>
 
-          {/* English translation sub-tagline */}
-          <p className="text-lg text-rose-100 font-light leading-relaxed">
-            Find and book your perfect wedding venue. Your dream celebration, made simple, transparent, and beautiful.
+          <p className="text-lg text-rose-100/90 font-light leading-relaxed">
+            Your dream celebration, made simple, transparent, and beautiful.
           </p>
         </div>
 
@@ -106,7 +105,7 @@ export default function LoginPage() {
             <span className="w-8 h-8 rounded-full border-2 border-rose-500 bg-pink-300 flex items-center justify-center text-xs font-bold text-pink-800">M</span>
             <span className="w-8 h-8 rounded-full border-2 border-rose-500 bg-amber-300 flex items-center justify-center text-xs font-bold text-amber-800">K</span>
           </div>
-          <p>Trusted by over <strong className="text-white font-semibold">1,000+ couples</strong> in Karachi.</p>
+          <p>Trusted by couples planning their big day across Pakistan.</p>
         </div>
       </div>
 
@@ -115,13 +114,15 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Mobile Branding Header */}
           <div className="lg:hidden text-center space-y-2">
-            <div className="inline-flex items-center gap-2 text-rose-600">
-              <Sparkles className="h-6 w-6 fill-rose-100" />
+            <div className="inline-flex items-center gap-2.5 text-rose-600">
+              <LogoMark className="h-9 w-9" />
               <span className="font-serif text-2xl font-bold tracking-wide">
-                Shaadi<span className="text-stone-850">Spaces</span>
+                Wed<span className="text-stone-850">Ease</span>
               </span>
             </div>
-            <p className="text-stone-500 text-xs font-light">خوابوں کی شادی کا آغاز، بہترین مقامات کے ساتھ</p>
+            <p className="text-stone-500 text-xs font-light">
+              Find and book your perfect wedding venue.
+            </p>
           </div>
 
           <div className="space-y-2 text-center lg:text-left">

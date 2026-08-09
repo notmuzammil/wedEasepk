@@ -1,16 +1,81 @@
-# React + Vite
+# WedEase — wedease.com.pk
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A double-sided marketplace for booking wedding venues (halls, marquees, lawns
+and banquet spaces) across Pakistan. Customers browse and request dates,
+vendors list and manage their spaces, and admins review listings.
 
-Currently, two official plugins are available:
+Built with React + Vite, Tailwind CSS, TanStack Query, Zustand and Supabase.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Getting started
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Environment
 
-## Expanding the ESLint configuration
+Create a `.env` in the project root (it is git-ignored):
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```
+VITE_SUPABASE_URL=https://<your-project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
+```
+
+### 2. Database
+
+Run `database.sql` in the Supabase SQL Editor. It is the single source of
+truth for the schema and is idempotent, so it is safe to re-run.
+
+It creates the tables, row-level security policies, the signup trigger, and
+the two storage buckets (`venue-images`, public; `bookings`, private — payment
+receipts are served through signed URLs).
+
+### 3. Create an admin
+
+Roles are locked down by RLS, so the first admin has to be promoted by hand.
+Register through the app, then run in the SQL Editor:
+
+```sql
+update public.profiles
+   set role = 'admin'
+ where id = (select id from auth.users where email = 'you@example.com');
+```
+
+## Scripts
+
+| Command           | Description                       |
+| ----------------- | --------------------------------- |
+| `npm run dev`     | Start the dev server              |
+| `npm run build`   | Production build to `dist/`       |
+| `npm run preview` | Preview the production build      |
+| `npm run lint`    | Lint the project                  |
+
+## Roles
+
+- **Customer** — browse venues, request bookings, upload payment receipts,
+  manage their profile.
+- **Vendor** — list venues (each listing is reviewed before going live),
+  accept or decline booking requests.
+- **Admin** — approve, suspend and reactivate listings; manage vendor and
+  customer accounts; verify payments.
+
+## Venue lifecycle
+
+`draft` → `pending_approval` → `live` → `suspended`
+
+Only `live` venues appear in public browse and search. Editing a live listing
+sends it back to `pending_approval`.
+
+## Project layout
+
+```
+src/
+  components/   ui/ (design system), shared/, layout/
+  hooks/        useAuth, useVenues, useBookings
+  pages/        public/, customer/, vendor/, admin/
+  routes/       AppRouter + auth and role guards
+  services/     Supabase data access
+  store/        Zustand stores (auth, ui)
+  utils/        constants, formatters, validators
+```

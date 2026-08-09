@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { useUiStore } from '../store/uiStore';
 import {
@@ -9,7 +9,6 @@ import {
   createVenue,
   updateVenue,
   updateVenueStatus,
-  uploadVenueImage,
   searchVenues,
   deleteVenue,
 } from '../services/venueService';
@@ -22,7 +21,8 @@ export const useVenuesList = (filters = {}) => {
   return useQuery({
     queryKey: ['venues-list', filters],
     queryFn: () => getVenues(filters),
-    keepPreviousData: true,
+    // v5 spelling — plain `keepPreviousData: true` is silently ignored.
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 2, // 2-minute stale window
   });
 };
@@ -38,7 +38,7 @@ export const useVenues = (filters = {}) => {
       const result = await getVenues({ ...filters, limit: 50 });
       return result.data;
     },
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 };
 

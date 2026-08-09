@@ -6,6 +6,7 @@
  */
 
 export { Button }     from './Button';
+export { LogoMark }   from './LogoMark';
 export { Input }      from './Input';
 export { Textarea }   from './Textarea';
 export { Select }     from './Select';

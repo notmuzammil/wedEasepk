@@ -4,6 +4,24 @@ import { formatDate, formatCurrency } from '../../utils/formatDate';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 
+/** Booking lifecycle → badge appearance. */
+const BOOKING_STATUS_BADGE = {
+  pending_approval: { label: 'Pending',   variant: 'warning' },
+  pending:          { label: 'Pending',   variant: 'warning' },
+  approved:         { label: 'Approved',  variant: 'success' },
+  confirmed:        { label: 'Approved',  variant: 'success' },
+  paid:             { label: 'Paid',      variant: 'success' },
+  rejected:         { label: 'Rejected',  variant: 'danger'  },
+  cancelled:        { label: 'Cancelled', variant: 'danger'  },
+};
+
+/** Payment lifecycle → badge appearance. */
+const PAYMENT_STATUS_BADGE = {
+  unpaid:               { label: 'Unpaid',    variant: 'neutral' },
+  pending_verification: { label: 'Verifying', variant: 'warning' },
+  paid:                 { label: 'Paid',      variant: 'success' },
+};
+
 export const BookingCard = ({
   booking,
   role,
@@ -39,6 +57,10 @@ export const BookingCard = ({
     return 'Full Day';
   };
 
+  const bookingBadge =
+    BOOKING_STATUS_BADGE[status] || { label: status || 'Unknown', variant: 'neutral' };
+  const paymentBadge = PAYMENT_STATUS_BADGE[payment_status] || null;
+
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-4 hover:shadow-md transition-shadow">
       
@@ -53,8 +75,10 @@ export const BookingCard = ({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge status={status} />
-          <Badge status={payment_status} customLabel={payment_status === 'pending_verification' ? 'Verifying PKR' : undefined} />
+          <Badge variant={bookingBadge.variant}>{bookingBadge.label}</Badge>
+          {paymentBadge && (
+            <Badge variant={paymentBadge.variant}>{paymentBadge.label}</Badge>
+          )}
         </div>
       </div>
 
@@ -96,8 +120,8 @@ export const BookingCard = ({
       {/* Customer details for Vendors/Admins */}
       {customer && (role === 'vendor' || role === 'admin') && (
         <div className="bg-stone-50 rounded-xl p-3 text-xs text-stone-600 border border-stone-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          <p>Customer: <strong className="text-stone-900">{customer.full_name}</strong></p>
-          <p>Phone: <strong className="text-stone-900">{customer.phone_number}</strong></p>
+          <p>Customer: <strong className="text-stone-900">{customer.full_name || '—'}</strong></p>
+          <p>Phone: <strong className="text-stone-900">{customer.phone || '—'}</strong></p>
         </div>
       )}
 

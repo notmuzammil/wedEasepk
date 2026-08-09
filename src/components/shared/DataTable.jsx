@@ -157,7 +157,7 @@ export default function DataTable({
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center justify-center text-stone-400 gap-2">
-                    <AlertCircle size={28} className="stroke-1.5 text-stone-300" />
+                    <AlertCircle size={28} strokeWidth={1.5} className="text-stone-300" />
                     <span className="text-xs font-semibold uppercase tracking-wider">{emptyMessage}</span>
                   </div>
                 </td>

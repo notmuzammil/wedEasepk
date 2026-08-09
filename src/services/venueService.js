@@ -3,6 +3,24 @@ import { supabase } from '../lib/supabaseClient';
 const PAGE_LIMIT = 12;
 
 /**
+ * Statuses that make a venue publicly visible. 'approved' is the legacy value;
+ * 'live' is what the admin console writes today. Both are accepted so existing
+ * rows keep showing up.
+ */
+export const PUBLIC_VENUE_STATUSES = ['live', 'approved'];
+
+/**
+ * Coerces a filter value to a usable positive number, or null.
+ * Guards the query builder against '', null, undefined, 0 and NaN — any of
+ * which would otherwise be interpolated straight into a PostgREST filter.
+ */
+function toPositiveNumber(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
  * Fetch paginated list of LIVE/approved venues with flexible filters.
  *
  * @param {object} filters
@@ -36,14 +54,17 @@ export const getVenues = async (filters = {}) => {
     priceRange,
   } = filters;
 
-  const resolvedStatus = status || 'approved';
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
   let dbQuery = supabase
     .from('venues')
-    .select('*, venue_images(storage_path, is_cover)', { count: 'exact' })
-    .eq('status', resolvedStatus);
+    .select('*, venue_images(storage_path, is_cover, display_order)', { count: 'exact' });
+
+  // Callers may pin an exact status (admin views); otherwise show public venues.
+  dbQuery = status
+    ? dbQuery.eq('status', status)
+    : dbQuery.in('status', PUBLIC_VENUE_STATUSES);
 
   // City filter — supports both 'city' and 'area' column names
   if (city) {
@@ -63,14 +84,16 @@ export const getVenues = async (filters = {}) => {
   }
 
   // Numeric capacity filter — supports both 'capacity' and 'capacity_max'
-  const capValue = minCapacity || (capacity ? parseInt(capacity, 10) : null);
+  const capValue = toPositiveNumber(minCapacity) ?? toPositiveNumber(capacity);
   if (capValue) {
     dbQuery = dbQuery.or(`capacity.gte.${capValue},capacity_max.gte.${capValue}`);
   }
 
-  // Price range filters — supports both price_per_plate and price_per_day
-  const minP = minPrice;
-  const maxP = maxPrice;
+  // Price bounds are matched against whichever pricing column the venue uses.
+  // A venue priced per day has no per-plate value (and vice versa), so a null
+  // in the other column must not exclude the row.
+  const minP = toPositiveNumber(minPrice);
+  const maxP = toPositiveNumber(maxPrice);
   if (minP) {
     dbQuery = dbQuery.or(`price_per_plate.gte.${minP},price_per_day.gte.${minP}`);
   }
@@ -95,10 +118,10 @@ export const getVenues = async (filters = {}) => {
   // Sorting
   switch (sort) {
     case 'price_asc':
-      dbQuery = dbQuery.order('price_per_plate', { ascending: true, nullsFirst: false });
+      dbQuery = dbQuery.order('price_per_day', { ascending: true, nullsFirst: false });
       break;
     case 'price_desc':
-      dbQuery = dbQuery.order('price_per_plate', { ascending: false, nullsFirst: false });
+      dbQuery = dbQuery.order('price_per_day', { ascending: false, nullsFirst: false });
       break;
     default:
       dbQuery = dbQuery.order('created_at', { ascending: false });
@@ -121,7 +144,7 @@ export const getVenueById = async (id) => {
     .select(`
       *,
       venue_images(id, storage_path, is_cover, display_order),
-      vendor:profiles!venues_vendor_id_fkey(full_name, phone),
+      vendor:profiles!venues_vendor_id_fkey(id, full_name, phone),
       reviews(id, rating, comment, created_at, customer:profiles!reviews_customer_id_fkey(full_name))
     `)
     .eq('id', id)
@@ -142,10 +165,10 @@ export const searchVenues = async (query) => {
   const { data, error } = await supabase
     .from('venues')
     .select('id, name, city, area, type, capacity, capacity_max, price_per_plate, price_per_day, venue_images(storage_path, is_cover)')
-    .eq('status', 'approved')
+    .in('status', PUBLIC_VENUE_STATUSES)
     .or(`name.ilike.%${query}%,city.ilike.%${query}%,area.ilike.%${query}%,description.ilike.%${query}%`)
-    .limit(8)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(8);
 
   if (error) throw error;
   return data || [];
@@ -154,7 +177,7 @@ export const searchVenues = async (query) => {
 export const getVendorVenues = async (vendorId) => {
   const { data, error } = await supabase
     .from('venues')
-    .select('*')
+    .select('*, venue_images(storage_path, is_cover, display_order)')
     .eq('vendor_id', vendorId)
     .order('created_at', { ascending: false });
 
@@ -167,9 +190,9 @@ export const getPendingVenues = async () => {
     .from('venues')
     .select(`
       *,
-      vendor:profiles!venues_vendor_id_fkey(full_name, phone)
+      vendor:profiles!venues_vendor_id_fkey(id, full_name, phone)
     `)
-    .or('status.eq.pending,status.eq.pending_approval')
+    .in('status', ['pending', 'pending_approval'])
     .order('created_at', { ascending: true });
 
   if (error) throw error;
@@ -212,8 +235,10 @@ export const updateVenueStatus = async (venueId, status) => {
 };
 
 export const uploadVenueImage = async (file, vendorId) => {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${vendorId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+  const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  // Path convention is venue-photos/<vendor_id>/<file>; the storage RLS policy
+  // checks the vendor id in the second folder segment.
+  const fileName = `${vendorId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
   const filePath = `venue-photos/${fileName}`;
 
   const { error: uploadError } = await supabase.storage

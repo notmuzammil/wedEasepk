@@ -8,13 +8,13 @@ import {
   Calendar, 
   User, 
   Building, 
-  Users, 
+  Users,
   Sparkles,
   ClipboardList
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { signOut } from '../../services/authService';
-import { Avatar, Badge } from '../ui';
+import { Avatar, Badge, LogoMark } from '../ui';
 
 /**
  * DashboardLayout organizes navigation structures for logged-in users.
@@ -77,33 +77,33 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-stone-100 font-sans text-stone-900 antialiased">
+    <div className="min-h-screen flex bg-stone-50 font-sans text-stone-900 antialiased">
       {/* ── MOBILE SIDEBAR DRAWBACK BACKGROUND OVERLAY ────────────────── */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-stone-950/60 backdrop-blur-sm lg:hidden transition-all duration-300"
+          className="fixed inset-0 z-40 bg-rose-950/70 backdrop-blur-sm lg:hidden transition-all duration-300"
         />
       )}
 
       {/* ── SIDEBAR PANEL ─────────────────────────────────────────── */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-stone-900 text-stone-200 border-r border-stone-850 flex flex-col justify-between
+          fixed inset-y-0 left-0 z-50 w-64 bg-rose-950 text-rose-100 border-r border-white/10 flex flex-col justify-between
           transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="flex flex-col flex-1">
           {/* Logo / Brand Header */}
-          <div className="h-16 flex items-center justify-between px-6 border-b border-stone-850 bg-stone-950">
-            <Link to="/" className="flex items-center gap-2 font-serif text-lg font-bold text-white tracking-wide">
-              <Sparkles className="h-5 w-5 text-rose-500 fill-rose-500/20" />
-              <span>Shaadi<span className="text-rose-500">Spaces</span></span>
+          <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 bg-rose-950">
+            <Link to="/" className="flex items-center gap-2.5 font-serif text-lg font-bold text-white tracking-wide">
+              <LogoMark className="h-7 w-7" />
+              <span>Wed<span className="text-gold-400">Ease</span></span>
             </Link>
             <button 
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-stone-400 hover:text-white"
+              className="lg:hidden text-rose-200/80 hover:text-white"
             >
               <X className="h-5 w-5" />
             </button>
@@ -120,8 +120,8 @@ export default function DashboardLayout() {
                 className={({ isActive }) => `
                   flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-150
                   ${isActive 
-                    ? 'bg-rose-500/10 text-rose-400 border-l-4 border-rose-500 pl-3 font-semibold' 
-                    : 'text-stone-400 hover:bg-stone-800/50 hover:text-stone-100'}
+                    ? 'bg-white/10 text-gold-300 border-l-4 border-gold-400 pl-3 font-semibold' 
+                    : 'text-rose-200/80 hover:bg-white/5 hover:text-white'}
                 `}
               >
                 {item.icon}
@@ -132,7 +132,7 @@ export default function DashboardLayout() {
         </div>
 
         {/* Sidebar Footer User Section */}
-        <div className="p-4 border-t border-stone-850 bg-stone-950/40 hidden lg:block">
+        <div className="p-4 border-t border-white/10 bg-black/15 hidden lg:block">
           <div className="flex items-center gap-3 mb-4">
             <Avatar 
               name={profile?.full_name || 'User'} 
@@ -140,13 +140,13 @@ export default function DashboardLayout() {
               size="md" 
             />
             <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-stone-100 truncate">{profile?.full_name}</p>
-              <p className="text-[10px] text-stone-500 truncate capitalize">{profile?.role}</p>
+              <p className="text-xs font-semibold text-white truncate">{profile?.full_name}</p>
+              <p className="text-[10px] text-rose-200/70 truncate capitalize">{profile?.role}</p>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-stone-800 hover:border-red-900/60 rounded-lg text-xs font-medium text-stone-400 hover:text-red-400 hover:bg-red-950/20 transition-all"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-white/15 hover:border-white/30 rounded-lg text-xs font-medium text-rose-200/85 hover:text-white hover:bg-white/10 transition-all"
           >
             <LogOut className="h-3.5 w-3.5" /> Sign Out
           </button>

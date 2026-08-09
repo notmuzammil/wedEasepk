@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Search, Phone, Calendar, Mail, Store, ShieldAlert, Check, X, Ban, RefreshCw } from 'lucide-react';
+import { Search, Check, Ban } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatDate } from '../../utils/formatDate';
 import { useUiStore } from '../../store/uiStore';
@@ -8,10 +8,9 @@ import DataTable from '../../components/shared/DataTable';
 import { Badge } from '../../components/ui/Badge';
 
 const TABS = [
-  { key: 'all',              label: 'All Accounts' },
-  { key: 'pending_approval', label: 'Pending Approval' },
-  { key: 'approved',         label: 'Approved' },
-  { key: 'suspended',        label: 'Suspended' },
+  { key: 'all',       label: 'All Accounts' },
+  { key: 'approved',  label: 'Active' },
+  { key: 'suspended', label: 'Suspended' },
 ];
 
 export default function ManageVendors() {
@@ -38,15 +37,11 @@ export default function ManageVendors() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Filter profiles: vendors are profiles with roles: 'vendor', 'pending_vendor', or customers that are marked as suspended vendors
-      // To make it simple and bulletproof, we show profiles whose role is 'vendor' or 'pending_vendor',
-      // or custom suspended status.
-      // Wait, let's treat any customer with venues as a suspended vendor! This is extremely smart because if a vendor was suspended,
-      // they were set back to 'customer', but they still have venue listings in the db!
-      const compiled = (data || []).filter(p => 
-        p.role === 'vendor' || 
-        p.role === 'pending_vendor' || 
+
+      // A suspended vendor is demoted to 'customer' but keeps their venue rows,
+      // so any customer that still owns venues is really a suspended vendor.
+      const compiled = (data || []).filter(p =>
+        p.role === 'vendor' ||
         (p.role === 'customer' && p.venues && p.venues.length > 0)
       );
 
@@ -106,7 +101,6 @@ export default function ManageVendors() {
     TABS.forEach(t => {
       if (t.key !== 'all') {
         counts[t.key] = vendors.filter(v => {
-          if (t.key === 'pending_approval') return v.role === 'pending_vendor';
           if (t.key === 'approved') return v.role === 'vendor';
           if (t.key === 'suspended') return v.role === 'customer'; // customer role with venues means suspended vendor
           return false;
@@ -120,14 +114,12 @@ export default function ManageVendors() {
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
       const matchStatus = filter === 'all' ||
-        (filter === 'pending_approval' && v.role === 'pending_vendor') ||
         (filter === 'approved' && v.role === 'vendor') ||
         (filter === 'suspended' && v.role === 'customer');
 
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !searchQuery ||
         v.full_name?.toLowerCase().includes(q) ||
-        v.email?.toLowerCase().includes(q) ||
         v.phone?.includes(q);
 
       return matchStatus && matchSearch;
@@ -150,14 +142,9 @@ export default function ManageVendors() {
       ),
     },
     {
-      key: 'email',
-      label: 'Email',
-      render: (row) => <div className="text-stone-500 font-medium">{row.email || 'No email'}</div>,
-    },
-    {
       key: 'phone',
       label: 'Phone',
-      render: (row) => <div className="text-stone-500 font-semibold">{row.phone || row.phone_number || 'TBD'}</div>,
+      render: (row) => <div className="text-stone-500 font-semibold">{row.phone || 'Not provided'}</div>,
     },
     {
       key: 'venues_count',
@@ -175,46 +162,18 @@ export default function ManageVendors() {
       key: 'status',
       label: 'Account Status',
       align: 'center',
-      render: (row) => {
-        let variant = 'neutral';
-        let label = 'Suspended';
-        if (row.role === 'vendor') {
-          variant = 'success';
-          label = 'Approved';
-        } else if (row.role === 'pending_vendor') {
-          variant = 'warning';
-          label = 'Pending';
-        }
-        return <Badge variant={variant}>{label}</Badge>;
-      },
+      render: (row) => (
+        row.role === 'vendor'
+          ? <Badge variant="success">Active</Badge>
+          : <Badge variant="neutral">Suspended</Badge>
+      ),
     },
     {
       key: 'actions',
-      label: 'Verification Control',
+      label: 'Account Control',
       align: 'right',
       render: (row) => {
         const isActioning = actioningId === row.id;
-
-        if (row.role === 'pending_vendor') {
-          return (
-            <div className="flex justify-end gap-2 shrink-0">
-              <button
-                onClick={() => handleUpdateRole(row.id, 'vendor', 'Vendor approved successfully!')}
-                disabled={isActioning}
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
-              >
-                <Check size={10} /> Approve
-              </button>
-              <button
-                onClick={() => handleUpdateRole(row.id, 'customer', 'Vendor registration declined.')}
-                disabled={isActioning}
-                className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
-              >
-                <X size={10} /> Reject
-              </button>
-            </div>
-          );
-        }
 
         if (row.role === 'vendor') {
           return (

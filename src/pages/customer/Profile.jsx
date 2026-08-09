@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +34,7 @@ const passwordSchema = z
 const AvatarCircle = ({ name }) => {
   const initials = getInitials(name);
   return (
-    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center shadow-lg">
+    <div className="h-20 w-20 rounded-full bg-rose-600 bg-gradient-to-br from-rose-600 via-rose-700 to-rose-800 flex items-center justify-center shadow-lg">
       <span className="text-2xl font-black text-white tracking-tight">{initials}</span>
     </div>
   );
@@ -44,11 +44,11 @@ const AvatarCircle = ({ name }) => {
 const SectionCard = ({ icon: Icon, title, subtitle, children }) => (
   <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
     <div className="px-6 py-4 border-b border-stone-100 flex items-center gap-3">
-      <div className="bg-emerald-50 p-2 rounded-lg">
-        <Icon className="h-5 w-5 text-emerald-700" />
+      <div className="bg-rose-50 p-2 rounded-lg">
+        <Icon className="h-5 w-5 text-rose-600" />
       </div>
       <div>
-        <h2 className="font-serif text-lg font-bold text-emerald-950">{title}</h2>
+        <h2 className="font-serif text-lg font-bold text-stone-900">{title}</h2>
         {subtitle && <p className="text-xs text-stone-500">{subtitle}</p>}
       </div>
     </div>
@@ -70,7 +70,7 @@ const PasswordInput = ({ label, error, ...props }) => {
           type={show ? 'text' : 'password'}
           className={`
             w-full pl-10 pr-10 py-2.5 text-sm border rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700
+            focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500
             transition-colors bg-white
             ${error ? 'border-rose-400 bg-rose-50' : 'border-stone-200'}
           `}
@@ -91,10 +91,9 @@ const PasswordInput = ({ label, error, ...props }) => {
 
 // ─── Role Badge ───────────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
-  customer:       { label: 'Customer',        color: 'bg-sky-50 text-sky-700 border-sky-200' },
-  vendor:         { label: 'Venue Vendor',     color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  admin:          { label: 'Administrator',    color: 'bg-purple-50 text-purple-700 border-purple-200' },
-  pending_vendor: { label: 'Vendor (Pending)', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  customer: { label: 'Customer',      color: 'bg-sky-50 text-sky-700 border-sky-200' },
+  vendor:   { label: 'Venue Vendor',  color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  admin:    { label: 'Administrator', color: 'bg-purple-50 text-purple-700 border-purple-200' },
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -107,6 +106,7 @@ const Profile = () => {
   const {
     register: regProfile,
     handleSubmit: handleProfile,
+    reset: resetProfile,
     formState: { errors: profileErrors, isDirty },
   } = useForm({
     resolver: zodResolver(profileSchema),
@@ -115,6 +115,16 @@ const Profile = () => {
       phone:    profile?.phone || '',
     },
   });
+
+  // The profile arrives asynchronously, after the form has already mounted with
+  // empty defaults — re-seed it (and reset the dirty flag) once it lands.
+  useEffect(() => {
+    if (!profile) return;
+    resetProfile({
+      fullName: profile.full_name || '',
+      phone:    profile.phone || '',
+    });
+  }, [profile, resetProfile]);
 
   const {
     register: regPw,
@@ -144,7 +154,7 @@ const Profile = () => {
 
       {/* ── Page Header ── */}
       <div>
-        <h1 className="font-serif text-3xl font-bold text-emerald-950">Profile Settings</h1>
+        <h1 className="font-serif text-3xl font-bold text-stone-900">Profile Settings</h1>
         <p className="text-stone-500 text-sm mt-1">
           Manage your personal information and account security.
         </p>
@@ -243,7 +253,7 @@ const Profile = () => {
         {pwSuccess ? (
           <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
             <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-            <p className="text-sm font-semibold text-emerald-800">Password changed successfully!</p>
+            <p className="text-sm font-semibold text-rose-700">Password changed successfully!</p>
           </div>
         ) : (
           <form onSubmit={handlePw(onPasswordSubmit)} className="space-y-4">

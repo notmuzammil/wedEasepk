@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
 import { Spinner } from '../components/ui';
 
 /**
@@ -12,10 +12,15 @@ import { Spinner } from '../components/ui';
  * - Role not in allowedRoles → redirects to /unauthorized
  * - Role matches             → renders child routes via <Outlet />
  *
+ * Reads straight from the auth store rather than calling useAuth(): useAuth()
+ * owns the Supabase auth subscription, and mounting it here would tear that
+ * subscription down whenever this route unmounts.
+ *
  * @param {{ allowedRoles: string[] }} props
  */
 export function RoleRoute({ allowedRoles }) {
-  const { role, isLoading } = useAuth();
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const role = useAuthStore((state) => state.profile?.role);
 
   if (isLoading) {
     return (
