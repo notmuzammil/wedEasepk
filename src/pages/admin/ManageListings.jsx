@@ -8,12 +8,13 @@ import { formatCurrency } from '../../utils/formatDate';
 import DataTable from '../../components/shared/DataTable';
 import { Badge } from '../../components/ui/Badge';
 import { PAKISTAN_CITIES } from '../../utils/constants';
+import { useAdminAllVenues, useUpdateVenueStatus } from '../../hooks/useVenues';
 
 const TABS = [
-  { key: 'all',              label: 'All Listings' },
-  { key: 'pending_approval', label: 'Pending Review' },
-  { key: 'live',             label: 'Live' },
-  { key: 'suspended',        label: 'Suspended' },
+  { key: 'all', label: 'All Listings' },
+  { key: 'pending', label: 'Pending Review' },
+  { key: 'live', label: 'Live' },
+  { key: 'suspended', label: 'Suspended' },
 ];
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600';
@@ -23,67 +24,61 @@ export default function ManageListings() {
   const showToast = useUiStore((state) => state.showToast);
 
   // States
-  const [venues, setVenues] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // const [venues, setVenues] = useState([]);
+  // const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [selectedCity, setSelectedCity] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [actioningId, setActioningId] = useState(null);
 
-  // Fetch all listings with vendor details
-  const fetchListings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('venues')
-        .select(`
-          *,
-          vendor:profiles!venues_vendor_id_fkey(full_name, phone),
-          venue_images(storage_path, is_cover)
-        `)
-        .order('created_at', { ascending: false });
+  const { data: venues = [], isLoading: loading, isError, error, refetch } = useAdminAllVenues();
+  const updateStatusMutation = useUpdateVenueStatus();
 
-      if (error) throw error;
-      setVenues(data || []);
-    } catch (err) {
-      console.error('Error fetching admin listings:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchListings = async () => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('venues')
+  //       .select(`
+  //         *,
+  //         vendor:profiles!venues_vendor_id_fkey(full_name, phone),
+  //         venue_images(storage_path, is_cover)
+  //       `)
+  //       .order('created_at', { ascending: false });
 
-  useEffect(() => {
-    fetchListings();
-  }, []);
+  //     if (error) throw error;
+  //     setVenues(data || []);
+  //   } catch (err) {
+  //     console.error('Error fetching admin listings:', err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   fetchListings();
+  // }, []);
 
   // Update listing status handler
-  const handleUpdateStatus = async (venueId, targetStatus, successMessage) => {
-    setActioningId(venueId);
-    try {
-      const { error } = await supabase
-        .from('venues')
-        .update({ status: targetStatus })
-        .eq('id', venueId);
-
-      if (error) throw error;
-      
-      showToast(successMessage, 'success');
-      await fetchListings();
-      queryClient.invalidateQueries({ queryKey: ['venues'] });
-      queryClient.invalidateQueries({ queryKey: ['venues-list'] });
-    } catch (err) {
-      showToast(err.message || 'Listing update failed', 'error');
-    } finally {
-      setActioningId(null);
-    }
-  };
-
+const handleUpdateStatus = async (venueId, targetStatus, successMessage) => {
+  setActioningId(venueId);
+  try {
+    await updateStatusMutation.mutateAsync({ id: venueId, status: targetStatus });
+    showToast(successMessage, 'success');
+  } catch (err) {
+    showToast(err.message || 'Listing update failed', 'error');
+  } finally {
+    setActioningId(null);
+  }
+};
   // Tab counts
   const tabCounts = useMemo(() => {
     const counts = { all: venues.length };
     TABS.forEach(t => {
       if (t.key !== 'all') {
         counts[t.key] = venues.filter(v => {
-          if (t.key === 'pending_approval') return v.status === 'pending_approval' || v.status === 'pending';
+          if (t.key === 'pending') return v.status === 'pending' || v.status === 'pending_approval';
+          if (t.key === 'live') return v.status === 'live' || v.status === 'approved';
+          if (t.key === 'suspended') return v.status === 'suspended' || v.status === 'rejected';
           return v.status === t.key;
         }).length;
       }
@@ -95,8 +90,9 @@ export default function ManageListings() {
   const filteredVenues = useMemo(() => {
     return venues.filter(v => {
       const matchStatus = filter === 'all' ||
-        (filter === 'pending_approval' && (v.status === 'pending_approval' || v.status === 'pending')) ||
-        v.status === filter;
+        (filter === 'pending' && (v.status === 'pending' || v.status === 'pending_approval')) ||
+        (filter === 'live' && (v.status === 'live' || v.status === 'approved')) ||
+        (filter === 'suspended' && (v.status === 'suspended' || v.status === 'rejected'));
 
       const matchCity = !selectedCity || v.city === selectedCity;
 
@@ -151,8 +147,8 @@ export default function ManageListings() {
       align: 'center',
       render: (row) => (
         <div className="font-bold text-stone-700">
-          {row.capacity_max 
-            ? `${row.capacity_min || 50} - ${row.capacity_max}` 
+          {row.capacity_max
+            ? `${row.capacity_min || 50} - ${row.capacity_max}`
             : `${row.capacity || '?'} max`
           }
         </div>
@@ -164,8 +160,8 @@ export default function ManageListings() {
       align: 'right',
       render: (row) => (
         <div className="font-bold text-emerald-800">
-          {row.price_per_day 
-            ? `${formatCurrency(row.price_per_day)}/d` 
+          {row.price_per_day
+            ? `${formatCurrency(row.price_per_day)}/d`
             : `${formatCurrency(row.price_per_plate)}/p`
           }
         </div>
@@ -181,7 +177,7 @@ export default function ManageListings() {
         if (row.status === 'draft') {
           variant = 'neutral';
           label = 'Draft';
-        } else if (row.status === 'pending_approval' || row.status === 'pending') {
+        } else if (row.status === 'pending' || row.status === 'pending') {
           variant = 'warning';
           label = 'Pending';
         } else if (row.status === 'live' || row.status === 'approved') {
@@ -214,19 +210,28 @@ export default function ManageListings() {
               <Eye size={10} /> Preview
             </a>
 
-            {(row.status === 'pending_approval' || row.status === 'pending') && (
-              <button
-                onClick={() => handleUpdateStatus(row.id, 'live', 'Venue listings activated publicly!')}
-                disabled={isActioning}
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
-              >
-                <Check size={10} /> Approve
-              </button>
+            {(row.status === 'pending' || row.status === 'pending_approval') && (
+              <>
+                <button
+                  onClick={() => handleUpdateStatus(row.id, 'approved', 'Venue listings activated publicly!')}
+                  disabled={isActioning}
+                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
+                >
+                  <Check size={10} /> Approve
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus(row.id, 'rejected', 'Venue listing declined.')}
+                  disabled={isActioning}
+                  className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
+                >
+                  <Ban size={10} /> Decline
+                </button>
+              </>
             )}
 
-            {row.status === 'live' && (
+            {(row.status === 'live' || row.status === 'approved') && (
               <button
-                onClick={() => handleUpdateStatus(row.id, 'suspended', 'Listing suspended successfully.')}
+                onClick={() => handleUpdateStatus(row.id, 'rejected', 'Listing suspended successfully.')}
                 disabled={isActioning}
                 className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
                 id={`suspend-listing-${row.id}`}
@@ -235,9 +240,9 @@ export default function ManageListings() {
               </button>
             )}
 
-            {row.status === 'suspended' && (
+            {(row.status === 'suspended' || row.status === 'rejected') && (
               <button
-                onClick={() => handleUpdateStatus(row.id, 'live', 'Listing re-activated successfully!')}
+                onClick={() => handleUpdateStatus(row.id, 'approved', 'Listing re-activated successfully!')}
                 disabled={isActioning}
                 className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-sm transition inline-flex items-center gap-1"
                 id={`unsuspend-listing-${row.id}`}
@@ -253,7 +258,7 @@ export default function ManageListings() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none font-sans">
-      
+
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 border-b border-stone-100 pb-3">
         <div className="space-y-1">
@@ -266,25 +271,23 @@ export default function ManageListings() {
 
       {/* Control panel: filter tabs + city select + search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200 pb-3">
-        
+
         {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1 shrink-0">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setFilter(t.key)}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 text-xs font-semibold whitespace-nowrap transition ${
-                filter === t.key 
-                  ? 'border-rose-600 text-rose-600 font-bold' 
+              className={`flex items-center gap-2 px-4 py-2 border-b-2 text-xs font-semibold whitespace-nowrap transition ${filter === t.key
+                  ? 'border-rose-600 text-rose-600 font-bold'
                   : 'border-transparent text-stone-500 hover:text-rose-500'
-              }`}
+                }`}
               id={`filter-tab-${t.key}`}
             >
               {t.label}
               {tabCounts[t.key] > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${
-                  filter === t.key ? 'bg-rose-600 text-white' : 'bg-stone-100 text-stone-500'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${filter === t.key ? 'bg-rose-600 text-white' : 'bg-stone-100 text-stone-500'
+                  }`}>
                   {tabCounts[t.key]}
                 </span>
               )}
@@ -326,13 +329,31 @@ export default function ManageListings() {
       </div>
 
       {/* DataTable */}
-      <DataTable
-        columns={columns}
-        data={filteredVenues}
-        isLoading={loading}
-        pageSize={10}
-        emptyMessage={searchQuery || selectedCity ? "No listings match your search query." : "No listings found in this status catalog."}
-      />
+      {isError ? (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-center space-y-4 max-w-xl mx-auto">
+          <div className="flex justify-center text-rose-500">
+            <AlertCircle size={40} className="stroke-1.5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-semibold text-rose-900 text-sm">Failed to Load Venue Listings</h3>
+            <p className="text-rose-600 text-xs">{error?.message || 'An unexpected error occurred while fetching listings.'}</p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-sm transition"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filteredVenues}
+          isLoading={loading}
+          pageSize={10}
+          emptyMessage={searchQuery || selectedCity ? "No listings match your search query." : "No listings found in this status catalog."}
+        />
+      )}
 
     </div>
   );

@@ -12,6 +12,7 @@ import {
   uploadVenueImage,
   searchVenues,
   deleteVenue,
+  getAllVenuesAdmin
 } from '../services/venueService';
 
 /**
@@ -118,6 +119,7 @@ export const useUpdateVenueStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }) => updateVenueStatus(id, status),
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-all-venues'] });
       queryClient.invalidateQueries({ queryKey: ['pending-venues'] });
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       queryClient.invalidateQueries({ queryKey: ['venues-list'] });
@@ -144,5 +146,16 @@ export const useDeleteVenue = () => {
     onError: (error) => {
       showToast(error.message || 'Failed to delete venue', 'error');
     },
+  });
+};
+
+export const useAdminAllVenues = () => {
+  const { profile } = useAuthStore();
+  return useQuery({
+    queryKey: ['admin-all-venues'],
+    queryFn: getAllVenuesAdmin,
+    enabled: !!profile?.id && profile?.role === 'admin',
+    retry: 2,
+    staleTime: 1000 * 60 * 2,
   });
 };

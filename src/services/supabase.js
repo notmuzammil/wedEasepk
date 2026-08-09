@@ -6,7 +6,7 @@ export const signUpUser = async ({ email, password, fullName, phone, role }) => 
     password,
     options: {
       data: {
-        full_name: fullName,
+        full_name: full_name,
         phone_number: phone,
         role: role
       }

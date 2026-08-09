@@ -77,6 +77,7 @@ export default function AdminDashboard() {
     // Pending approvals sum (pending venues + pending vendors)
     const pendingVenuesCount = venues.filter(v => v.status === 'pending_approval' || v.status === 'pending').length;
     const pendingVendorsCount = pendingVendors.length;
+    console.log(pendingVendors)
     const totalPending = pendingVenuesCount + pendingVendorsCount;
 
     return { totalUsers, totalVenues, totalBookings, totalPending };

@@ -24,6 +24,8 @@ export const useAuthStore = create((set) => ({
   isLoading:       true,
   isAuthenticated: false,
 
+  
+
   // ── Actions ──────────────────────────────────────────────
 
   /** Stores the Supabase auth user and marks as authenticated. */
@@ -31,8 +33,8 @@ export const useAuthStore = create((set) => ({
     set({ user, isAuthenticated: !!user }),
 
   /** Stores the public profile row fetched from the DB. */
-  setProfile: (profile) =>
-    set({ profile }),
+  setProfile: (profile) => 
+    set({profile}),
 
   /** Toggles the global loading flag used during session initialisation. */
   setLoading: (isLoading) =>

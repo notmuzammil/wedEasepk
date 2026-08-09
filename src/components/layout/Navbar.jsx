@@ -34,7 +34,7 @@ export function Navbar() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2 text-xl font-bold tracking-wide text-stone-900">
               <Sparkles className="h-5 w-5 text-rose-600" />
-              <span>Shaadi<span className="text-rose-600">Spaces</span></span>
+              <span>Wed<span className="text-rose-600">Ease</span></span>
             </Link>
           </div>
 
@@ -95,12 +95,10 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <Link to={dashboardLink} onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50">Dashboard</Link>
-              <button onClick={handleLogout} className="w-full text-left rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sign Out</button>
             </>
           ) : (
             <>
               <Link to="/login" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50">Login</Link>
-              <Link to="/register" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50">Register</Link>
             </>
           )}
         </div>
