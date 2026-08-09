@@ -169,7 +169,7 @@ export const getPendingVenues = async () => {
       *,
       vendor:profiles!venues_vendor_id_fkey(full_name, phone)
     `)
-    .or('status.eq.pending,status.eq.pending_approval')
+    .eq('status', 'pending')  // sirf 'pending' — kyunke AddVenue.jsx mein yahi set ho rahi hai
     .order('created_at', { ascending: true });
 
   if (error) throw error;
@@ -239,4 +239,18 @@ export const deleteVenue = async (venueId) => {
 
   if (error) throw error;
   return data;
+};
+
+export const getAllVenuesAdmin = async () => {
+  const { data, error } = await supabase
+    .from('venues')
+    .select(`
+      *,
+      vendor:profiles!venues_vendor_id_fkey(full_name),
+      venue_images(storage_path, is_cover)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 };

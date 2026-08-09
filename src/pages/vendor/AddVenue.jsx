@@ -10,7 +10,7 @@ import {
 import { useCreateVenue } from '../../hooks/useVenues';
 import { useAuthStore } from '../../store/authStore';
 import { useUiStore } from '../../store/uiStore';
-import { PAKISTAN_CITIES, AMENITIES } from '../../utils/constants';
+import { PAKISTAN_CITIES, AMENITIES, VENUE_TYPES } from '../../utils/constants';
 import { uploadVenueImage } from '../../services/venueService';
 import { supabase } from '../../lib/supabaseClient';
 import { Input } from '../../components/ui/Input';
@@ -20,6 +20,7 @@ import { Button } from '../../components/ui/Button';
 // Validation Schema for steps
 const step1Schema = z.object({
   name: z.string().min(3, 'Venue name must be at least 3 characters'),
+  type: z.enum(['hall', 'marquee', 'banquet', 'lawn'], { required_error: 'Please select a venue type' }),
   city: z.string().min(1, 'Please select a city'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
   description: z.string().min(20, 'Description must be at least 20 characters'),
@@ -61,7 +62,7 @@ export default function AddVenue() {
     getValues: getValues1,
   } = useForm({
     resolver: zodResolver(step1Schema),
-    defaultValues: { name: '', city: 'Karachi', address: '', description: '' }
+    defaultValues: { name: '', type: 'hall', city: 'Karachi', address: '', description: '' }
   });
 
   const {
@@ -156,23 +157,26 @@ export default function AddVenue() {
       }
 
       // 2. Insert Parent Venue Space
+      const capacityMax = parseInt(values2.capacityMax, 10);
+      const pricePerDay = parseInt(values2.pricePerDay, 10);
+
       const newVenue = await createVenueMutation.mutateAsync({
-        vendor_id: profile.id,
-        name: values1.name,
-        city: values1.city,
-        address: values1.address,
-        area: values1.city, // fallback
-        description: values1.description,
+        vendor_id:    profile.id,
+        name:         values1.name,
+        type:         values1.type,
+        city:         values1.city,
+        address:      values1.address,
+        area:         values1.city,
+        description:  values1.description,
+        capacity:     capacityMax,
         capacity_min: parseInt(values2.capacityMin || 50, 10),
-        capacity_max: parseInt(values2.capacityMax, 10),
-        price_per_day: parseInt(values2.pricePerDay, 10),
-        // Send duplicate fields for older database versions compatibility
-        capacity: parseInt(values2.capacityMax, 10),
-        price_per_plate: parseInt(values2.pricePerDay, 10),
-        min_spending: parseInt(values2.pricePerDay, 10),
-        amenities: values2.amenities,
-        images: uploadedUrls, // array column fallback
-        status: 'pending_approval', // awaits Admin live approval
+        capacity_max: capacityMax,
+        price_per_plate: pricePerDay,
+        price_per_day:   pricePerDay,
+        min_spending:    pricePerDay,
+        amenities:    values2.amenities,
+        images:       uploadedUrls,
+        status:       'pending',
       });
 
       // 3. Insert Child images rows into `venue_images` child table
@@ -275,13 +279,21 @@ export default function AddVenue() {
               id="new-venue-name"
             />
             <Select 
-              label="City Location *" 
-              options={PAKISTAN_CITIES.map(c => ({ value: c, label: c }))} 
-              error={errors1.city?.message} 
-              {...register1('city')} 
-              id="new-venue-city"
+              label="Venue Type *" 
+              options={VENUE_TYPES} 
+              error={errors1.type?.message} 
+              {...register1('type')} 
+              id="new-venue-type"
             />
           </div>
+
+          <Select 
+            label="City Location *" 
+            options={PAKISTAN_CITIES.map(c => ({ value: c, label: c }))} 
+            error={errors1.city?.message} 
+            {...register1('city')} 
+            id="new-venue-city"
+          />
 
           <Input 
             label="Street Address *" 

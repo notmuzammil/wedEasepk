@@ -6,9 +6,9 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  fullName: z.string().min(3, 'Full name must be at least 3 characters'),
+  full_name: z.string().min(3, 'Full name must be at least 3 characters'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().regex(/^(\+92|0|92)[0-9]{10}$/, 'Invalid Pakistani phone number (e.g. 03001234567)'),
+  phone_number: z.string().regex(/^(\+92|0|92)[0-9]{10}$/, 'Invalid Pakistani phone number (e.g. 03001234567)'),
   role: z.enum(['customer', 'vendor']),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string()

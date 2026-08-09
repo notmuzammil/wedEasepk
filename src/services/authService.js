@@ -11,21 +11,19 @@ import { supabase } from '../lib/supabaseClient';
  * @param {'customer'|'vendor'} role
  * @returns {Promise<{ user: object, session: object }>}
  */
-export async function signUpWithEmail(email, password, fullName, role = 'customer', phone = null) {
+export async function signUpWithEmail(email, password, full_name, role = 'customer', phone_number) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: {
+        full_name,
+        role,
+        phone_number
+      },
+    },
   });
   if (error) throw error;
-
-  // Upsert profile so role + full_name + phone are correct even before email confirmation
-  if (data.user) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({ id: data.user.id, full_name: fullName, role, phone }, { onConflict: 'id' });
-    if (profileError) throw profileError;
-  }
 
   return data;
 }
@@ -36,11 +34,15 @@ export async function signInWithEmail(email, password) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('*')
     .eq('id', data.user.id)
     .single();
 
   if (profileError) throw profileError;
+
+  if (profile) {
+    profile.phone = profile.phone_number;
+  }
 
   return { ...data, profile };
 }
@@ -90,6 +92,10 @@ export async function fetchProfile(userId) {
     .eq('id', userId)
     .single();
   if (error) throw error;
+
+  if (data) {
+    data.phone = data.phone_number;
+  }
   return data;
 }
 
@@ -100,14 +106,18 @@ export async function fetchProfile(userId) {
  * @param {{ fullName: string, phone: string }} updateData
  * @returns {Promise<object>} updated profile
  */
-export async function updateProfile(userId, { fullName, phone }) {
+export async function updateProfile(userId, { full_name, phone }) {
   const { data, error } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, phone })
+    .update({ full_name: full_name, phone_number: phone })
     .eq('id', userId)
     .select()
     .single();
   if (error) throw error;
+
+  if (data) {
+    data.phone = data.phone_number;
+  }
   return data;
 }
 

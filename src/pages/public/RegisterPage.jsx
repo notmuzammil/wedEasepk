@@ -32,12 +32,13 @@ export default function RegisterPage() {
   }, [register]);
 
   const onSubmit = (data) => {
+    console.log("form data", data)
     registerMutation.mutate(
       {
         email: data.email,
         password: data.password,
-        fullName: data.fullName,
-        phone: data.phone,
+        full_name: data.full_name,
+        phone_number: data.phone_number,
         role: data.role,
       },
       {
@@ -122,8 +123,8 @@ export default function RegisterPage() {
               type="text"
               placeholder="e.g. Muhammad Ali"
               leftIcon={<User className="h-4 w-4" />}
-              error={errors.fullName?.message}
-              {...register('fullName')}
+              error={errors.full_name?.message}
+              {...register('full_name')}
             />
 
             <Input
@@ -140,8 +141,8 @@ export default function RegisterPage() {
               type="text"
               placeholder="e.g. 03001234567"
               leftIcon={<Phone className="h-4 w-4" />}
-              error={errors.phone?.message}
-              {...register('phone')}
+              error={errors.phone_number?.message}
+              {...register('phone_number')}
             />
 
             {/* Interactive Card Role Selector */}
