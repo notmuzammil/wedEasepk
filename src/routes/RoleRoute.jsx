@@ -30,7 +30,9 @@ export function RoleRoute({ allowedRoles }) {
   }
 
   if (!allowedRoles.includes(role)) {
-    return <Navigate to="/unauthorized" replace />;
+    if (role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (role === 'vendor') return <Navigate to="/vendor/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
