@@ -18,28 +18,14 @@ import {
  *   2. Subscribing to all future auth-state changes
  *   3. Fetching the profile row whenever a session is detected
  *
- * Mount this hook **once** at the top of the component tree (e.g. in App.jsx).
- *
- * @returns {{ user, profile, role, isLoading, isAuthenticated }}
+ * Mount this hook **once** at the root (App.jsx). It must live in a component
+ * that never unmounts — tying it to a layout tore the subscription down and
+ * re-ran the bootstrap (spinner flash) on every public → dashboard navigation.
  */
-let isAuthSetupStarted = false;
-
-export function useAuth() {
-  const {
-    user,
-    profile,
-    isLoading,
-    isAuthenticated,
-    setUser,
-    setProfile,
-    setLoading,
-    clearAuth,
-  } = useAuthStore();
+export function useAuthBootstrap() {
+  const { setUser, setProfile, setLoading, clearAuth } = useAuthStore.getState();
 
   useEffect(() => {
-    if (isAuthSetupStarted) return;
-    isAuthSetupStarted = true;
-
     let isMounted = true;
 
     // Explicitly set isLoading = true on mount
@@ -61,7 +47,7 @@ export function useAuth() {
         const profileData = await fetchProfile(session.user.id);
         // Store profile (with role) in the Zustand store
         if (isMounted) setProfile(profileData);
-      } catch (err) {
+      } catch {
         // Profile may not exist yet (e.g. during email confirmation)
         if (isMounted) setProfile(null);
       } finally {
@@ -89,9 +75,17 @@ export function useAuth() {
     return () => {
       isMounted = false;
       subscription.unsubscribe();
-      isAuthSetupStarted = false;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/**
+ * Reads the current auth state from the store.
+ *
+ * @returns {{ user, profile, role, isLoading, isAuthenticated }}
+ */
+export function useAuth() {
+  const { user, profile, isLoading, isAuthenticated } = useAuthStore();
 
   return {
     user,

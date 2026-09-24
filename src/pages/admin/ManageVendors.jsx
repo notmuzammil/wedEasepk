@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Search, Phone, Calendar, Mail, Store, ShieldAlert, Check, X, Ban, RefreshCw } from 'lucide-react';
+import { Search, Check, X, Ban } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatDate } from '../../utils/formatDate';
 import { useUiStore } from '../../store/uiStore';
@@ -245,7 +245,7 @@ export default function ManageVendors() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none font-sans">
+    <div className="max-w-6xl mx-auto space-y-8 font-sans">
       
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 border-b border-stone-100 pb-3">

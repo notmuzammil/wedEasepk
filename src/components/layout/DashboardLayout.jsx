@@ -1,20 +1,46 @@
-import React, { useState } from 'react';
-import { NavLink, Link, useNavigate, Outlet } from 'react-router-dom';
-import { 
-  Menu, 
-  X, 
-  LogOut, 
-  LayoutDashboard, 
-  Calendar, 
-  User, 
-  Building, 
-  Users, 
-  Sparkles,
-  ClipboardList
+import React, { useEffect, useState } from 'react';
+import { NavLink, Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
+import {
+  Menu,
+  X,
+  LogOut,
+  LayoutDashboard,
+  Calendar,
+  User,
+  Building,
+  Users,
+  PlusCircle,
+  ClipboardList,
+  ExternalLink,
+  Store,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { signOut } from '../../services/authService';
 import { Avatar, Badge } from '../ui';
+import { Logo } from '../shared/Logo';
+
+const NAV_BY_ROLE = {
+  customer: [
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'My Bookings', path: '/my-bookings', icon: Calendar },
+    { label: 'Profile Settings', path: '/profile', icon: User },
+  ],
+  vendor: [
+    { label: 'Overview', path: '/vendor/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'Manage Venues', path: '/vendor/venues', icon: Building, end: true },
+    { label: 'Add Venue', path: '/vendor/venues/new', icon: PlusCircle },
+    { label: 'Booking Requests', path: '/vendor/bookings', icon: Calendar },
+  ],
+  admin: [
+    { label: 'Overview', path: '/admin/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'Review Listings', path: '/admin/venues', icon: ClipboardList },
+    { label: 'Manage Bookings', path: '/admin/bookings', icon: Calendar },
+    { label: 'Vendors Directory', path: '/admin/vendors', icon: Store },
+    { label: 'Users Directory', path: '/admin/users', icon: Users },
+  ],
+};
+
+const ROLE_BADGE = { admin: 'danger', vendor: 'success', customer: 'brand' };
 
 /**
  * DashboardLayout organizes navigation structures for logged-in users.
@@ -22,8 +48,20 @@ import { Avatar, Badge } from '../ui';
  */
 export default function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { profile } = useAuthStore();
+
+  const navLinks = NAV_BY_ROLE[profile?.role] || [];
+  const currentPage =
+    navLinks.find((l) => (l.end ? location.pathname === l.path : location.pathname.startsWith(l.path)))?.label ||
+    'Workspace';
+
+  // Close the drawer and reset scroll on navigation
+  useEffect(() => {
+    setIsSidebarOpen(false);
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -34,182 +72,135 @@ export default function DashboardLayout() {
     }
   };
 
-  // Compile list of navigation items dynamically based on the role
-  const getNavLinks = () => {
-    switch (profile?.role) {
-      case 'customer':
-        return [
-          { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
-          { label: 'My Bookings', path: '/my-bookings', icon: <Calendar className="h-5 w-5" /> },
-          { label: 'Profile Settings', path: '/profile', icon: <User className="h-5 w-5" /> },
-        ];
-      case 'vendor':
-        return [
-          { label: 'Overview', path: '/vendor/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
-          { label: 'Manage Venues', path: '/vendor/venues', icon: <Building className="h-5 w-5" /> },
-          { label: 'Add Venue', path: '/vendor/venues/new', icon: <Sparkles className="h-5 w-5" /> },
-          { label: 'Booking Requests', path: '/vendor/bookings', icon: <Calendar className="h-5 w-5" /> },
-        ];
-      case 'admin':
-        return [
-          { label: 'Overview', path: '/admin/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
-          { label: 'Review Listings', path: '/admin/venues', icon: <ClipboardList className="h-5 w-5" /> },
-          { label: 'Manage Bookings', path: '/admin/bookings', icon: <Calendar className="h-5 w-5" /> },
-          { label: 'Vendors Directory', path: '/admin/vendors', icon: <Users className="h-5 w-5" /> },
-          { label: 'Users Directory', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
-        ];
-      default:
-        return [];
-    }
-  };
-
-  const navLinks = getNavLinks();
-
-  const getRoleBadgeVariant = () => {
-    switch (profile?.role) {
-      case 'admin':
-        return 'danger'; // Rose-red color
-      case 'vendor':
-        return 'success'; // Emerald-green color
-      default:
-        return 'info'; // Blue color
-    }
-  };
-
   return (
-    <div className="min-h-screen flex bg-stone-100 font-sans text-stone-900 antialiased">
-      {/* ── MOBILE SIDEBAR DRAWBACK BACKGROUND OVERLAY ────────────────── */}
+    <div className="min-h-screen bg-[#f7f4f0] font-sans text-stone-900 antialiased lg:flex">
+      {/* ── MOBILE OVERLAY ─────────────────────────────────────── */}
       {isSidebarOpen && (
-        <div 
+        <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-stone-950/60 backdrop-blur-sm lg:hidden transition-all duration-300"
+          className="fixed inset-0 z-40 bg-stone-950/50 backdrop-blur-sm lg:hidden animate-in fade-in-0"
         />
       )}
 
-      {/* ── SIDEBAR PANEL ─────────────────────────────────────────── */}
+      {/* ── SIDEBAR ────────────────────────────────────────────── */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-stone-900 text-stone-200 border-r border-stone-850 flex flex-col justify-between
-          transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto
+          fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-stone-950 text-stone-300
+          transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <div className="flex flex-col flex-1">
-          {/* Logo / Brand Header */}
-          <div className="h-16 flex items-center justify-between px-6 border-b border-stone-850 bg-stone-950">
-            <Link to="/" className="flex items-center gap-2 font-serif text-lg font-bold text-white tracking-wide">
-              <Sparkles className="h-5 w-5 text-rose-500 fill-rose-500/20" />
-              <span>Shaadi<span className="text-rose-500">Spaces</span></span>
-            </Link>
-            <button 
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-stone-400 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-rose-900/30 to-transparent" aria-hidden="true" />
 
-          {/* Navigation Links list */}
-          <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-            {navLinks.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsSidebarOpen(false)}
-                end={item.path === '/dashboard' || item.path === '/vendor/dashboard' || item.path === '/admin/dashboard'}
-                className={({ isActive }) => `
-                  flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-150
-                  ${isActive 
-                    ? 'bg-rose-500/10 text-rose-400 border-l-4 border-rose-500 pl-3 font-semibold' 
-                    : 'text-stone-400 hover:bg-stone-800/50 hover:text-stone-100'}
-                `}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+        <div className="relative flex h-16 items-center justify-between px-5">
+          <Logo tone="light" size="sm" />
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="grid h-8 w-8 place-items-center rounded-lg text-stone-400 hover:bg-white/10 hover:text-white lg:hidden"
+            aria-label="Close navigation"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Sidebar Footer User Section */}
-        <div className="p-4 border-t border-stone-850 bg-stone-950/40 hidden lg:block">
-          <div className="flex items-center gap-3 mb-4">
-            <Avatar 
-              name={profile?.full_name || 'User'} 
-              src={profile?.avatar_url} 
-              size="md" 
-            />
-            <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-stone-100 truncate">{profile?.full_name}</p>
-              <p className="text-[10px] text-stone-500 truncate capitalize">{profile?.role}</p>
+        <p className="relative px-6 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+          {profile?.role ? `${profile.role} workspace` : 'Workspace'}
+        </p>
+
+        <nav className="relative flex-1 space-y-1 overflow-y-auto px-3 scrollbar-none">
+          {navLinks.map(({ path, label, icon: Icon, end }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={end}
+              className={({ isActive }) => `
+                group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150
+                ${isActive
+                  ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+                  : 'text-stone-400 hover:bg-white/5 hover:text-stone-100'}
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  <span className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-rose-500 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                  <Icon className={`h-[18px] w-[18px] transition-colors ${isActive ? 'text-rose-400' : 'text-stone-500 group-hover:text-stone-300'}`} />
+                  <span>{label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+
+          {/* Vendors/admins are redirected away from public pages, so only customers get this */}
+          {profile?.role === 'customer' && (
+            <>
+              <div className="my-4 border-t border-white/5" />
+              <Link
+                to="/venues"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-400 transition-colors hover:bg-white/5 hover:text-stone-100"
+              >
+                <ExternalLink className="h-[18px] w-[18px] text-stone-500" /> Browse venues
+              </Link>
+            </>
+          )}
+        </nav>
+
+        {/* User card */}
+        <div className="relative m-3 rounded-2xl bg-white/5 p-3 ring-1 ring-white/5">
+          <div className="flex items-center gap-3">
+            <Avatar name={profile?.full_name || 'User'} src={profile?.avatar_url} size="md" className="ring-stone-900" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-stone-100">{profile?.full_name || 'Guest'}</p>
+              <p className="truncate text-xs capitalize text-stone-500">{profile?.role}</p>
             </div>
+            <button
+              onClick={handleSignOut}
+              className="grid h-8 w-8 place-items-center rounded-lg text-stone-400 transition-colors hover:bg-red-500/15 hover:text-red-400"
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-stone-800 hover:border-red-900/60 rounded-lg text-xs font-medium text-stone-400 hover:text-red-400 hover:bg-red-950/20 transition-all"
-          >
-            <LogOut className="h-3.5 w-3.5" /> Sign Out
-          </button>
         </div>
       </aside>
 
-      {/* ── MAIN WORKSPACE CANVAS ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
-        {/* Top Header navbar */}
-        <header className="h-16 bg-white border-b border-stone-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm">
-          <div className="flex items-center gap-4">
+      {/* ── MAIN ───────────────────────────────────────────────── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-stone-900/5 bg-[#f7f4f0]/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden text-stone-600 hover:bg-stone-50 rounded-lg p-1.5 border border-stone-200"
+              className="grid h-9 w-9 place-items-center rounded-xl border border-stone-200 bg-white text-stone-700 shadow-sm lg:hidden"
+              aria-label="Open navigation"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <span className="text-stone-400 text-xs font-light tracking-wide uppercase hidden sm:inline">
-                Portal Workspace
-              </span>
-              <span className="text-stone-300 hidden sm:inline">|</span>
-              <h2 className="text-sm font-semibold text-stone-800 capitalize">
-                {profile?.role || 'Guest'} Control Center
-              </h2>
+            <div className="min-w-0">
+              <p className="hidden text-xs text-stone-400 sm:block">
+                <span className="capitalize">{profile?.role || 'Guest'}</span> <span className="mx-1">/</span> {currentPage}
+              </p>
+              <h2 className="truncate font-sans text-sm font-semibold text-stone-900 sm:text-base">{currentPage}</h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Quick Profile Summary badge */}
+          <div className="flex items-center gap-3">
             {profile && (
-              <Badge variant={getRoleBadgeVariant()}>
-                <span className="capitalize font-bold text-[10px]">{profile.role}</span>
+              <Badge variant={ROLE_BADGE[profile.role] || 'neutral'} dot>
+                <span className="capitalize">{profile.role}</span>
               </Badge>
             )}
-
-            <div className="h-4 w-px bg-stone-200" />
-
-            {/* Mobile Header Logout and Avatar */}
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden md:block">
-                <p className="text-xs font-semibold text-stone-800">{profile?.full_name}</p>
-                <p className="text-[10px] text-stone-400 font-light">{profile?.phone || 'No phone'}</p>
-              </div>
-              <Avatar 
-                name={profile?.full_name || 'User'} 
-                src={profile?.avatar_url} 
-                size="sm" 
-              />
-              <button
-                onClick={handleSignOut}
-                className="lg:hidden text-stone-500 hover:text-red-600 p-1 rounded-lg hover:bg-stone-50 transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+            <div className="hidden text-right md:block">
+              <p className="text-sm font-semibold leading-tight text-stone-800">{profile?.full_name}</p>
+              <p className="text-xs text-stone-400">{profile?.phone || 'No phone added'}</p>
             </div>
+            <Avatar name={profile?.full_name || 'User'} src={profile?.avatar_url} size="sm" />
           </div>
         </header>
 
-        {/* Content Outlet Canvas */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
-          <Outlet />
+        <main className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+          <div key={location.pathname} className="animate-in fade-in-0 duration-500">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

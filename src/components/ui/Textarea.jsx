@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import PropTypes from 'prop-types';
+import { labelClass, fieldBase, fieldState, errorClass, helperClass } from './fieldStyles';
 
 /**
  * Multi-line text input with label, helper text, and error state.
@@ -12,9 +13,9 @@ export const Textarea = forwardRef(function Textarea(
   const textareaId = id || `textarea-${label?.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label htmlFor={textareaId} className="text-sm font-medium text-stone-700">
+        <label htmlFor={textareaId} className={labelClass}>
           {label}
         </label>
       )}
@@ -23,28 +24,19 @@ export const Textarea = forwardRef(function Textarea(
         ref={ref}
         id={textareaId}
         rows={rows}
-        className={`
-          block w-full rounded-lg border bg-white px-3 py-2 text-sm text-stone-900
-          placeholder:text-stone-400 transition-colors resize-y
-          focus:outline-none focus:ring-2 focus:ring-offset-0
-          ${error
-            ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
-            : 'border-stone-300 focus:border-rose-500 focus:ring-rose-200'}
-        `}
+        className={`${fieldBase} ${fieldState(error)} py-2.5 resize-y`}
         aria-invalid={!!error}
         aria-describedby={error ? `${textareaId}-error` : undefined}
         {...rest}
       />
 
       {error && (
-        <p id={`${textareaId}-error`} className="text-xs text-red-600" role="alert">
+        <p id={`${textareaId}-error`} className={errorClass} role="alert">
           {error}
         </p>
       )}
 
-      {!error && helperText && (
-        <p className="text-xs text-stone-500">{helperText}</p>
-      )}
+      {!error && helperText && <p className={helperClass}>{helperText}</p>}
     </div>
   );
 });

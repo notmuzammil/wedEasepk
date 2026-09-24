@@ -1,4 +1,4 @@
-// ShaadiSpaces constants
+// WedEase constants
 
 export const USER_ROLES = {
   CUSTOMER: 'customer',

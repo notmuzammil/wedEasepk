@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { forwardRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +34,7 @@ const passwordSchema = z
 const AvatarCircle = ({ name }) => {
   const initials = getInitials(name);
   return (
-    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center shadow-lg">
+    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-rose-500 to-rose-800 flex items-center justify-center shadow-lg">
       <span className="text-2xl font-black text-white tracking-tight">{initials}</span>
     </div>
   );
@@ -45,10 +45,10 @@ const SectionCard = ({ icon: Icon, title, subtitle, children }) => (
   <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
     <div className="px-6 py-4 border-b border-stone-100 flex items-center gap-3">
       <div className="bg-emerald-50 p-2 rounded-lg">
-        <Icon className="h-5 w-5 text-emerald-700" />
+        <Icon className="h-5 w-5 text-rose-600" />
       </div>
       <div>
-        <h2 className="font-serif text-lg font-bold text-emerald-950">{title}</h2>
+        <h2 className="font-serif text-lg font-bold text-stone-900">{title}</h2>
         {subtitle && <p className="text-xs text-stone-500">{subtitle}</p>}
       </div>
     </div>
@@ -57,7 +57,8 @@ const SectionCard = ({ icon: Icon, title, subtitle, children }) => (
 );
 
 // ─── Password Input ───────────────────────────────────────────────────────────
-const PasswordInput = ({ label, error, ...props }) => {
+// forwardRef is required so react-hook-form's register() can attach its ref
+const PasswordInput = forwardRef(function PasswordInput({ label, error, ...props }, ref) {
   const [show, setShow] = useState(false);
   return (
     <div className="space-y-1.5">
@@ -67,10 +68,11 @@ const PasswordInput = ({ label, error, ...props }) => {
       <div className="relative">
         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-stone-400" />
         <input
+          ref={ref}
           type={show ? 'text' : 'password'}
           className={`
             w-full pl-10 pr-10 py-2.5 text-sm border rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700
+            focus:outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400
             transition-colors bg-white
             ${error ? 'border-rose-400 bg-rose-50' : 'border-stone-200'}
           `}
@@ -87,7 +89,7 @@ const PasswordInput = ({ label, error, ...props }) => {
       {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
     </div>
   );
-};
+});
 
 // ─── Role Badge ───────────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
@@ -144,7 +146,7 @@ const Profile = () => {
 
       {/* ── Page Header ── */}
       <div>
-        <h1 className="font-serif text-3xl font-bold text-emerald-950">Profile Settings</h1>
+        <h1 className="font-serif text-3xl font-bold text-stone-900">Profile Settings</h1>
         <p className="text-stone-500 text-sm mt-1">
           Manage your personal information and account security.
         </p>
@@ -222,7 +224,7 @@ const Profile = () => {
               <Button
                 type="submit"
                 variant="primary"
-                loading={updateProfileMutation.isPending}
+                isLoading={updateProfileMutation.isPending}
                 disabled={!isDirty}
                 className="px-6"
               >
@@ -264,7 +266,7 @@ const Profile = () => {
               <Button
                 type="submit"
                 variant="primary"
-                loading={changePasswordMutation.isPending}
+                isLoading={changePasswordMutation.isPending}
                 className="px-6"
               >
                 <Lock className="h-4 w-4 mr-2" />

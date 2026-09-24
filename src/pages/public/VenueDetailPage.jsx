@@ -6,7 +6,7 @@ import { z } from 'zod';
 import {
   MapPin, Users, Utensils, Star, ChevronLeft, ChevronRight,
   Check, Calendar, Clock, ArrowLeft, Share2, Heart, Wifi,
-  Car, Wind, Zap, Music, Sparkles, Palette, X, Info, Phone, MessageSquare
+  Car, Wind, Zap, Music, Sparkles, Palette, X, Info, Phone, MessageSquare, Building2
 } from 'lucide-react';
 import { useVenueDetail } from '../../hooks/useVenues';
 import { useCreateBooking, useVenueAvailability } from '../../hooks/useBookings';
@@ -245,9 +245,9 @@ export default function VenueDetailPage() {
   // Loading spinner
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] bg-stone-50 text-stone-500 gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-stone-500 gap-4">
         <Spinner size="lg" />
-        <p className="animate-pulse text-sm font-medium tracking-wide">Gathering venue specifications...</p>
+        <p className="animate-pulse text-sm font-medium tracking-wide">Loading venue details…</p>
       </div>
     );
   }
@@ -256,11 +256,13 @@ export default function VenueDetailPage() {
   if (isError || !venue) {
     return (
       <div className="max-w-md mx-auto my-16 p-8 text-center bg-white rounded-3xl border border-stone-200 shadow-xl space-y-6">
-        <div className="text-4xl text-rose-500">🏛️</div>
-        <h2 className="font-serif text-2xl font-bold text-stone-900">Venue Specifications Unavailable</h2>
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-rose-50 text-rose-600 ring-1 ring-rose-100">
+          <Building2 className="h-7 w-7" />
+        </div>
+        <h2 className="font-serif text-2xl font-bold text-stone-900">This venue isn&apos;t available</h2>
         <p className="text-stone-500 text-sm">We couldn't retrieve information for this listing. It may have been unlisted or is under revision.</p>
         <Link to="/venues" className="inline-flex items-center gap-2 text-rose-600 hover:text-rose-700 font-semibold text-sm transition">
-          <ArrowLeft size={16} /> Return to Listing Directory
+          <ArrowLeft size={16} /> Browse other venues
         </Link>
       </div>
     );
@@ -272,10 +274,23 @@ export default function VenueDetailPage() {
 
   const amenityKeys = Array.isArray(venue.amenities) ? venue.amenities : [];
 
+  // Address often already contains area/city — only append the parts it's missing
+  const fullAddress = [venue.address, venue.area, venue.city]
+    .filter(Boolean)
+    .reduce((acc, part) => (acc.toLowerCase().includes(part.toLowerCase()) ? acc : acc ? `${acc}, ${part}` : part), '');
+
+  const capacityLabel = (() => {
+    const min = Number(venue.capacity) || null;
+    const max = Number(venue.capacity_max) || null;
+    if (min && max && min !== max) return `${min.toLocaleString()} – ${max.toLocaleString()} guests`;
+    const cap = max || min;
+    return cap ? `Up to ${cap.toLocaleString()} guests` : 'On request';
+  })();
+
   return (
-    <div className="bg-stone-50 min-h-screen pb-20 font-sans text-stone-850">
+    <div className="min-h-screen pb-20 font-sans text-stone-850">
       {/* ── 1. BREADCRUMBS & TOP BAR ─────────────────────────────────────── */}
-      <div className="bg-white border-b border-rose-100/50 sticky top-[64px] z-30 select-none">
+      <div className="bg-ivory/85 backdrop-blur-xl border-b border-stone-900/5 sticky top-16 z-30 select-none">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
             onClick={() => navigate(-1)} 
@@ -309,64 +324,92 @@ export default function VenueDetailPage() {
 
       {/* ── 2. GALLERY HERO ────────────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-4 mt-6">
-        <div 
-          className="relative h-[260px] sm:h-[380px] md:h-[480px] w-full rounded-3xl overflow-hidden bg-stone-200 shadow-lg group cursor-zoom-in"
-          onClick={() => { setLightboxIndex(activeImageIndex); setLightboxOpen(true); }}
-        >
-          {/* Main Image */}
-          <img
-            src={gallery[activeImageIndex]}
-            alt={venue.name}
-            className="w-full h-full object-cover transition-all duration-500 hover:scale-105"
-          />
-
-          {/* Nav Controls */}
-          {gallery.length > 1 && (
-            <>
-              <button
-                onClick={prevImage}
-                className="absolute left-4 top-50% -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100"
-                aria-label="Prev image"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={nextImage}
-                className="absolute right-4 top-50% -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100"
-                aria-label="Next image"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </>
-          )}
-
-          {/* Bottom Indicators */}
-          <div className="absolute bottom-4 right-4 px-3 py-1 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold rounded-full select-none">
-            {activeImageIndex + 1} / {gallery.length}
-          </div>
-        </div>
-
-        {/* Gallery Thumbnails */}
-        {gallery.length > 1 && (
-          <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-none select-none">
+        {/* Desktop: photo grid */}
+        {gallery.length >= 3 && (
+          <div className="hidden md:grid h-[460px] grid-cols-4 grid-rows-2 gap-3 overflow-hidden rounded-3xl">
             {gallery.slice(0, 5).map((img, idx) => (
               <button
                 key={idx}
-                onClick={() => setActiveImageIndex(idx)}
-                className={`relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl overflow-hidden shrink-0 border-2 transition ${
-                  activeImageIndex === idx ? 'border-rose-600 scale-95 shadow-md' : 'border-transparent hover:border-rose-300'
+                onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }}
+                className={`group relative overflow-hidden bg-stone-200 ${
+                  idx === 0 ? 'col-span-2 row-span-2' : gallery.length === 3 ? 'col-span-2' : ''
                 }`}
+                aria-label={`Open photo ${idx + 1}`}
               >
-                <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                {idx === 4 && gallery.length > 5 && (
-                  <div className="absolute inset-0 bg-black/50 text-white text-xs font-bold flex items-center justify-center">
-                    +{gallery.length - 5}
-                  </div>
+                <img
+                  src={img}
+                  alt={idx === 0 ? venue.name : `${venue.name} photo ${idx + 1}`}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+                <span className="absolute inset-0 bg-stone-950/0 transition-colors group-hover:bg-stone-950/10" />
+                {idx === Math.min(gallery.length, 5) - 1 && (
+                  <span className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-stone-800 shadow-lg backdrop-blur">
+                    View all {gallery.length} photos
+                  </span>
                 )}
               </button>
             ))}
           </div>
         )}
+
+        {/* Mobile (and short galleries): carousel */}
+        <div className={gallery.length >= 3 ? 'md:hidden' : ''}>
+          <div
+            className="relative h-[260px] sm:h-[380px] md:h-[480px] w-full rounded-3xl overflow-hidden bg-stone-200 shadow-lg group cursor-zoom-in"
+            onClick={() => { setLightboxIndex(activeImageIndex); setLightboxOpen(true); }}
+          >
+            <img
+              key={activeImageIndex}
+              src={gallery[activeImageIndex]}
+              alt={venue.name}
+              className="w-full h-full object-cover animate-in fade-in-0 duration-500"
+            />
+
+            {gallery.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label="Prev image"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 hover:bg-white text-stone-850 hover:text-rose-600 rounded-full flex items-center justify-center shadow-lg transition sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label="Next image"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+
+            <div className="absolute bottom-4 right-4 px-3 py-1 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold rounded-full select-none">
+              {activeImageIndex + 1} / {gallery.length}
+            </div>
+          </div>
+
+          {gallery.length > 1 && (
+            <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-none select-none">
+              {gallery.slice(0, 5).map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={`relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl overflow-hidden shrink-0 border-2 transition ${
+                    activeImageIndex === idx ? 'border-rose-600 scale-95 shadow-md' : 'border-transparent hover:border-rose-300'
+                  }`}
+                >
+                  <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                  {idx === 4 && gallery.length > 5 && (
+                    <div className="absolute inset-0 bg-black/50 text-white text-xs font-bold flex items-center justify-center">
+                      +{gallery.length - 5}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── 3. TWO COLUMN LAYOUT ────────────────────────────────────────── */}
@@ -397,7 +440,7 @@ export default function VenueDetailPage() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-stone-500">
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
-                <span>{[venue.address, venue.area, venue.city].filter(Boolean).join(', ')}</span>
+                <span>{fullAddress}</span>
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
@@ -413,13 +456,10 @@ export default function VenueDetailPage() {
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded-2xl border border-stone-200/60 shadow-sm flex flex-col justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Capacity Limit</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Guest capacity</span>
               <span className="text-stone-850 font-bold text-base mt-1 flex items-center gap-1.5">
                 <Users size={16} className="text-rose-500" />
-                {venue.capacity_max 
-                  ? `${venue.capacity || 50} - ${venue.capacity_max}` 
-                  : `${venue.capacity || '?'} guests`
-                }
+                {capacityLabel}
               </span>
             </div>
 
@@ -482,7 +522,7 @@ export default function VenueDetailPage() {
             <h2 className="font-serif text-xl font-bold text-stone-900 border-b border-stone-100 pb-3">Venue Address</h2>
             <div className="flex items-start gap-2.5 text-stone-600 text-sm">
               <MapPin className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
-              <span>{[venue.address, venue.area, venue.city].filter(Boolean).join(', ')}</span>
+              <span>{fullAddress}</span>
             </div>
             
             {mapIframeUrl && (

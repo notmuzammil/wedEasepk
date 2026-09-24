@@ -1,11 +1,50 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Calendar, Users, ArrowRight, ShieldCheck, Heart, Sparkles, Building2, MapPin } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Search, Calendar, Users, ArrowRight, ShieldCheck, Sparkles, MapPin, CheckCircle2,
+  Clock, BadgePercent, Receipt, Star, Building2,
+} from 'lucide-react';
 import { useUiStore } from '../../store/uiStore';
 import { useVenues } from '../../hooks/useVenues';
 import { PAKISTAN_CITIES } from '../../utils/constants';
 import { VenueCard } from '../../components/shared/VenueCard';
-import { Button } from '../../components/ui';
+import VenueCardSkeleton from '../../components/shared/VenueCardSkeleton';
+import { Reveal } from '../../components/shared/Reveal';
+import { EmptyState } from '../../components/ui';
+
+const img = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&q=80&w=${w}`;
+
+const HERO_IMAGES = {
+  main: img('photo-1519167758481-83f550bb49b3', 1000),
+  top: img('photo-1511795409834-ef04bbd61622', 600),
+  bottom: img('photo-1606800052052-a08af7148866', 600),
+};
+
+const VENUE_TYPES = [
+  { type: 'hall', label: 'Wedding Halls', blurb: 'Grand, climate-controlled', image: img('photo-1519167758481-83f550bb49b3', 700) },
+  { type: 'marquee', label: 'Marquees', blurb: 'Flexible & festive', image: img('photo-1510076857177-7470076d4098', 700) },
+  { type: 'banquet', label: 'Banquets', blurb: 'Elegant fine dining', image: img('photo-1511795409834-ef04bbd61622', 700) },
+  { type: 'lawn', label: 'Lawns', blurb: 'Open-air under the stars', image: img('photo-1469371670807-013ccf25f16a', 700) },
+];
+
+const STEPS = [
+  { icon: Search, title: 'Discover', text: 'Filter halls, lawns and marquees by city, guest count, budget and amenities.' },
+  { icon: Calendar, title: 'Reserve your slot', text: 'Check live date availability, pick your slot and menu, and send a booking request.' },
+  { icon: Sparkles, title: 'Celebrate', text: 'Upload your deposit receipt, coordinate with the venue, and enjoy the big day.' },
+];
+
+const FEATURES = [
+  { icon: ShieldCheck, title: 'Verified venues only', text: 'Every listing is reviewed by our team before it goes live.', wide: true },
+  { icon: Clock, title: 'Real-time availability', text: 'No more back-and-forth calls to check a date.' },
+  { icon: BadgePercent, title: 'Transparent pricing', text: 'Per-plate and per-day rates, upfront.' },
+  { icon: Receipt, title: 'Secure deposits', text: 'Upload payment receipts and track every booking status in one dashboard.', wide: true },
+];
+
+const STATS = [
+  { value: '500+', label: 'Premium venues' },
+  { value: '10k+', label: 'Happy couples' },
+  { value: '50+', label: 'Cities covered' },
+];
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -17,269 +56,390 @@ export default function HomePage() {
   const [guests, setGuests] = useState('');
 
   // Fetch approved venues for the featured list (slices to top 6)
-  const { data: venues, isLoading, isError } = useVenues({ status: 'approved' });
+  const { data: venues, isLoading, isError, refetch } = useVenues({ status: 'approved' });
   const featuredVenues = venues ? venues.slice(0, 6) : [];
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    
-    // Clear and set filters in UI state store
+
     setFilters({
       query: city,
       date: date,
       capacity: guests ? parseInt(guests, 10) : ''
     });
 
-    // Navigate to listings
-    navigate(`/venues?city=${city}&date=${date}&guests=${guests}`);
+    const params = new URLSearchParams();
+    if (city) params.set('city', city);
+    if (date) params.set('date', date);
+    if (guests) params.set('minCap', guests);
+    navigate(`/venues${params.toString() ? `?${params}` : ''}`);
   };
 
   const handleQuickCitySelect = (cityName) => {
     setFilters({ query: cityName });
-    navigate(`/venues?city=${cityName}`);
+    navigate(`/venues?city=${encodeURIComponent(cityName)}`);
   };
 
+  const today = new Date().toISOString().split('T')[0];
+
   return (
-    <div className="space-y-16 sm:space-y-24 bg-stone-50 pb-16">
-      {/* ── 1. HERO SECTION ────────────────────────────────────────── */}
-      <section className="relative min-h-[90vh] flex items-center justify-center bg-gradient-to-br from-rose-50 via-rose-100/30 to-pink-100/50 px-4 sm:px-6 lg:px-8 py-20 overflow-hidden select-none">
-        {/* Soft, elegant vector floral corner shapes */}
-        <div className="absolute top-0 right-0 w-80 h-80 text-rose-200/20 pointer-events-none transform translate-x-20 -translate-y-20">
-          <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
-            <path d="M50 0 C60 25 75 40 100 50 C75 60 60 75 50 100 C40 75 25 60 0 50 C25 40 40 25 50 0 Z" />
-          </svg>
-        </div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 text-rose-200/20 pointer-events-none transform -translate-x-20 translate-y-20">
-          <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
-            <path d="M50 0 C60 25 75 40 100 50 C75 60 60 75 50 100 C40 75 25 60 0 50 C25 40 40 25 50 0 Z" />
-          </svg>
+    <div className="overflow-x-clip">
+      {/* ── 1. HERO ─────────────────────────────────────────────────── */}
+      <section className="relative -mt-16 pt-16">
+        {/* Gradient mesh backdrop */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div className="absolute -top-32 -left-32 h-[34rem] w-[34rem] rounded-full bg-rose-200/60 blur-[110px]" />
+          <div className="absolute top-20 right-0 h-[28rem] w-[28rem] rounded-full bg-gold-100/80 blur-[100px]" />
+          <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-rose-100/70 blur-[90px]" />
+          <div className="bg-grain absolute inset-0 opacity-60" />
         </div>
 
-        <div className="max-w-5xl w-full text-center space-y-8 z-10 relative">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-600/10 text-rose-700 rounded-full text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="h-3 w-3 fill-rose-600/35" /> Karachi's Leading Venue Network
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:px-8 lg:pb-24 lg:pt-16">
+          {/* Copy + search */}
+          <div className="lg:col-span-7 animate-fade-up">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/80 py-1 pl-1 pr-3 text-xs font-medium text-stone-700 shadow-soft ring-1 ring-stone-900/5 backdrop-blur">
+              <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">New</span>
+              Pakistan&apos;s smartest wedding venue marketplace
             </span>
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold text-stone-900 tracking-tight leading-none">
-              Find Your Perfect <span className="text-rose-600">Wedding Venue</span>
+
+            <h1 className="mt-6 font-serif text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-stone-900 sm:text-6xl lg:text-[4.25rem]">
+              Your dream wedding,{' '}
+              <span className="relative whitespace-nowrap italic text-gradient">beautifully</span>{' '}
+              booked.
             </h1>
-            <p className="font-serif text-xl sm:text-2xl text-stone-600 font-medium italic max-w-2xl mx-auto">
-              خوابوں کی شادی کا آغاز، بہترین مقامات کے ساتھ
+
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-stone-600 sm:text-lg">
+              Discover handpicked banquet halls, lawns and marquees. Compare prices, check live
+              availability and reserve your date — all in one place.
             </p>
-            <p className="text-stone-500 text-sm sm:text-base max-w-lg mx-auto font-light leading-relaxed">
-              Browse top-rated banquet halls, premium lawns, and luxury marquees. Check availability, slot limits, and book instantly.
-            </p>
+
+            {/* Search */}
+            <form
+              onSubmit={handleSearchSubmit}
+              className="mt-8 grid grid-cols-1 gap-1 rounded-3xl bg-white/90 p-2 shadow-lift ring-1 ring-stone-900/5 backdrop-blur-xl sm:grid-cols-2 lg:grid-cols-[1.15fr_1fr_0.85fr_auto] lg:rounded-full"
+            >
+              <label className="group flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-2.5 transition-colors hover:bg-stone-50 lg:rounded-full">
+                <MapPin className="h-5 w-5 shrink-0 text-rose-500" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-stone-400">Location</span>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full cursor-pointer appearance-none truncate bg-transparent p-0 text-sm font-semibold text-stone-900 focus:outline-none"
+                    aria-label="City"
+                  >
+                    <option value="">Any city</option>
+                    {PAKISTAN_CITIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-2.5 transition-colors hover:bg-stone-50 lg:rounded-full lg:border-l lg:border-stone-100">
+                <Calendar className="h-5 w-5 shrink-0 text-rose-500" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-stone-400">Event date</span>
+                  <input
+                    type="date"
+                    min={today}
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className={`w-full bg-transparent p-0 text-sm font-semibold focus:outline-none ${date ? 'text-stone-900' : 'text-stone-400'}`}
+                    aria-label="Event date"
+                  />
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-2.5 transition-colors hover:bg-stone-50 lg:rounded-full lg:border-l lg:border-stone-100">
+                <Users className="h-5 w-5 shrink-0 text-rose-500" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-stone-400">Guests</span>
+                  <input
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    placeholder="e.g. 300"
+                    value={guests}
+                    onChange={(e) => setGuests(e.target.value)}
+                    className="w-full bg-transparent p-0 text-sm font-semibold text-stone-900 placeholder:font-medium placeholder:text-stone-400 focus:outline-none"
+                    aria-label="Number of guests"
+                  />
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                className="group inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-700 px-7 text-sm font-semibold text-white shadow-glow transition-all hover:brightness-110 active:scale-[0.98] sm:col-span-2 lg:col-span-1 lg:rounded-full"
+              >
+                <Search className="h-4 w-4 transition-transform group-hover:scale-110" />
+                Search venues
+              </button>
+            </form>
+
+            {/* Trust row */}
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-stone-600">
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Verified listings</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Live availability</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Secure deposits</span>
+            </div>
           </div>
 
-          {/* Core Horizontal Search Bar Form Panel */}
-          <form 
-            onSubmit={handleSearchSubmit} 
-            className="bg-white p-4 sm:p-5 rounded-3xl shadow-xl border border-rose-100 flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-stretch md:items-center"
-          >
-            {/* City select */}
-            <div className="flex-1 flex items-center gap-3 px-3 py-2 border-b md:border-b-0 md:border-r border-stone-200">
-              <MapPin className="h-5 w-5 text-rose-500 shrink-0" />
-              <div className="flex-1 text-left">
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider">Location</label>
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full bg-transparent border-none p-0 text-sm font-semibold text-stone-850 focus:ring-0 focus:outline-none placeholder:text-stone-400"
-                >
-                  <option value="">Select City</option>
-                  {PAKISTAN_CITIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+          {/* Visual collage */}
+          <div className="relative hidden lg:col-span-5 lg:block">
+            <div className="relative mx-auto grid h-[34rem] max-w-md grid-cols-5 grid-rows-6 gap-4">
+              <div className="col-span-3 row-span-6 overflow-hidden rounded-[2rem] shadow-lift animate-in fade-in-0 zoom-in-95 duration-1000">
+                <img src={HERO_IMAGES.main} alt="Decorated wedding hall" className="h-full w-full object-cover" />
+              </div>
+              <div className="col-span-2 row-span-3 row-start-1 mt-10 overflow-hidden rounded-[1.75rem] shadow-lift animate-in fade-in-0 slide-in-from-top-6 duration-1000">
+                <img src={HERO_IMAGES.top} alt="Wedding table setting" className="h-full w-full object-cover" />
+              </div>
+              <div className="col-span-2 row-span-3 mb-10 overflow-hidden rounded-[1.75rem] shadow-lift animate-in fade-in-0 slide-in-from-bottom-6 duration-1000">
+                <img src={HERO_IMAGES.bottom} alt="Wedding rings" className="h-full w-full object-cover" />
+              </div>
+
+              {/* Floating cards */}
+              <div className="absolute -left-10 top-16 flex items-center gap-3 rounded-2xl bg-white/90 p-3 pr-5 shadow-lift ring-1 ring-stone-900/5 backdrop-blur animate-float">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900">Booking confirmed</p>
+                  <p className="text-xs text-stone-500">Evening slot · 450 guests</p>
+                </div>
+              </div>
+
+              <div className="absolute -right-6 bottom-20 rounded-2xl bg-stone-900/90 p-4 text-white shadow-lift backdrop-blur animate-float [animation-delay:-3s]">
+                <div className="flex items-center gap-1 text-gold-300">
+                  {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
+                </div>
+                <p className="mt-1.5 text-sm font-semibold">Loved by couples</p>
+                <p className="text-xs text-stone-400">across Pakistan</p>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Datepicker */}
-            <div className="flex-1 flex items-center gap-3 px-3 py-2 border-b md:border-b-0 md:border-r border-stone-200">
-              <Calendar className="h-5 w-5 text-rose-500 shrink-0" />
-              <div className="flex-1 text-left">
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider">Event Date</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-transparent border-none p-0 text-sm font-semibold text-stone-850 focus:ring-0 focus:outline-none"
-                />
+        {/* City marquee */}
+        <div className="border-y border-stone-900/5 bg-white/60 py-5 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+            <p className="hidden shrink-0 text-xs font-semibold uppercase tracking-[0.16em] text-stone-400 sm:block">
+              Explore by city
+            </p>
+            <div className="group relative flex-1 overflow-hidden mask-fade-x">
+              <div className="flex w-max animate-marquee gap-3 group-hover:[animation-play-state:paused]">
+                {[...PAKISTAN_CITIES, ...PAKISTAN_CITIES].map((cityName, i) => (
+                  <button
+                    key={`${cityName}-${i}`}
+                    onClick={() => handleQuickCitySelect(cityName)}
+                    tabIndex={i >= PAKISTAN_CITIES.length ? -1 : 0}
+                    aria-hidden={i >= PAKISTAN_CITIES.length || undefined}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-all hover:-translate-y-0.5 hover:border-rose-300 hover:text-rose-700 hover:shadow-soft"
+                  >
+                    <MapPin className="h-3.5 w-3.5 text-rose-400" /> {cityName}
+                  </button>
+                ))}
               </div>
             </div>
-
-            {/* Guest capacity count */}
-            <div className="flex-1 flex items-center gap-3 px-3 py-2">
-              <Users className="h-5 w-5 text-rose-500 shrink-0" />
-              <div className="flex-1 text-left">
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider">Total Guests</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 300"
-                  value={guests}
-                  onChange={(e) => setGuests(e.target.value)}
-                  className="w-full bg-transparent border-none p-0 text-sm font-semibold text-stone-850 focus:ring-0 focus:outline-none placeholder:text-stone-400"
-                />
-              </div>
-            </div>
-
-            {/* Submit Action */}
-            <Button
-              type="submit"
-              variant="primary"
-              className="py-3 px-6 rounded-2xl flex items-center justify-center font-semibold text-sm"
-            >
-              <Search className="h-4 w-4 mr-2" /> Search
-            </Button>
-          </form>
+          </div>
         </div>
       </section>
 
-      {/* ── 2. CITY QUICK-SELECT PILLS ────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
-        <h2 className="text-center text-xs font-bold text-stone-400 uppercase tracking-widest">
-          Quick Search By Region
-        </h2>
-        <div className="flex items-center justify-center gap-3 overflow-x-auto pb-4 scrollbar-none max-w-3xl mx-auto px-4">
-          {['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Peshawar', 'Multan', 'Faisalabad', 'Sialkot'].map((cityName) => (
-            <button
-              key={cityName}
-              onClick={() => handleQuickCitySelect(cityName)}
-              className="px-5 py-2 border border-stone-200 bg-white hover:bg-rose-50 hover:border-rose-300 text-stone-700 hover:text-rose-700 text-xs font-semibold rounded-full transition-all shrink-0 shadow-sm"
-            >
-              {cityName}
-            </button>
+      {/* ── 2. BROWSE BY TYPE ─────────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+        <Reveal className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <span className="eyebrow">Find your style</span>
+            <h2 className="section-title mt-3">Every kind of celebration</h2>
+          </div>
+          <Link to="/venues" className="group inline-flex items-center gap-1.5 text-sm font-semibold text-stone-900 hover:text-rose-700">
+            Browse all venues <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </Reveal>
+
+        <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-5">
+          {VENUE_TYPES.map((t, i) => (
+            <Reveal key={t.type} delay={i * 80}>
+              <Link
+                to={`/venues?type=${t.type}`}
+                className="group relative block aspect-[3/4] overflow-hidden rounded-3xl bg-stone-200 shadow-soft"
+              >
+                <img
+                  src={t.image}
+                  alt={t.label}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/10 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                  <h3 className="font-serif text-lg font-semibold text-white sm:text-2xl">{t.label}</h3>
+                  <p className="mt-0.5 text-xs text-white/75 sm:text-sm">{t.blurb}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-white opacity-0 transition-all duration-300 group-hover:opacity-100 sm:translate-y-2 sm:group-hover:translate-y-0">
+                    Explore <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </div>
+              </Link>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ── 3. FEATURED VENUES SECTION ────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="font-serif text-3xl font-bold text-stone-900">
-            Top Venues This Season
-          </h2>
-          <p className="text-stone-500 text-sm font-light max-w-md mx-auto">
-            Handpicked popular spaces, premium lawns, and elegant banquets listed by approved vendors.
-          </p>
-        </div>
+      {/* ── 3. FEATURED VENUES ────────────────────────────────────── */}
+      <section className="bg-white py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <span className="eyebrow">Handpicked for you</span>
+            <h2 className="section-title mt-3">Top venues this season</h2>
+            <p className="mt-3 text-stone-500">
+              Popular halls, premium lawns and elegant banquets from verified vendors.
+            </p>
+          </Reveal>
 
-        {/* Dynamic fetching loading grid skeletons */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="animate-pulse bg-white border border-stone-200 rounded-2xl h-[420px] flex flex-col justify-between p-5 space-y-4">
-                <div className="bg-stone-200 h-48 w-full rounded-xl"></div>
-                <div className="h-6 bg-stone-200 w-2/3 rounded"></div>
-                <div className="h-4 bg-stone-200 w-1/3 rounded"></div>
-                <div className="h-10 bg-stone-200 w-full rounded-xl"></div>
+          <div className="mt-12">
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((n) => <VenueCardSkeleton key={n} />)}
               </div>
-            ))}
+            ) : isError ? (
+              <div className="mx-auto max-w-lg rounded-3xl border border-stone-200 bg-ivory">
+                <EmptyState
+                  icon={<Building2 className="h-7 w-7" />}
+                  title="We couldn't load venues right now"
+                  description="Please check your connection and try again in a moment."
+                  action={{ label: 'Try again', onClick: () => refetch() }}
+                />
+              </div>
+            ) : featuredVenues.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {featuredVenues.map((venue, i) => (
+                  <Reveal key={venue.id} delay={(i % 3) * 90}>
+                    <VenueCard venue={venue} />
+                  </Reveal>
+                ))}
+              </div>
+            ) : (
+              <div className="mx-auto max-w-lg rounded-3xl border border-dashed border-stone-300 bg-ivory">
+                <EmptyState
+                  icon={<Building2 className="h-7 w-7" />}
+                  title="New venues are on their way"
+                  description="Our vendors are adding their spaces. Check back soon, or list your own venue today."
+                  action={{ label: 'List your venue', onClick: () => navigate('/register') }}
+                />
+              </div>
+            )}
           </div>
-        ) : isError ? (
-          <div className="text-center py-12 text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl max-w-xl mx-auto">
-            Failed to query venues. Please try again later.
-          </div>
-        ) : featuredVenues.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredVenues.map((venue) => (
-              <VenueCard key={venue.id} venue={venue} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16 bg-white border rounded-2xl text-stone-500 max-w-xl mx-auto">
-            No live wedding venues listed in the season currently.
-          </div>
-        )}
-      </section>
 
-      {/* ── 4. HOW IT WORKS ────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        <div className="text-center space-y-2">
-          <h2 className="font-serif text-3xl font-bold text-stone-900">
-            Simplify Your Booking
-          </h2>
-          <p className="text-stone-500 text-sm font-light max-w-md mx-auto">
-            Securing your dream wedding location has never been more straightforward.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
-          <div className="space-y-3 p-6 bg-white border border-stone-200 rounded-2xl shadow-sm hover:shadow transition-shadow">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 font-bold text-lg">
-              1
+          {featuredVenues.length > 0 && (
+            <div className="mt-12 text-center">
+              <Link
+                to="/venues"
+                className="group inline-flex h-12 items-center gap-2 rounded-full border border-stone-200 bg-white px-6 text-sm font-semibold text-stone-900 shadow-soft transition-all hover:border-stone-300 hover:shadow-lift"
+              >
+                View all venues <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
             </div>
-            <h3 className="font-serif font-bold text-stone-900">Search & Discover</h3>
-            <p className="text-stone-500 text-xs font-light leading-relaxed">
-              Browse top halls, lawns and marquees across major cities. Apply plate pricing and capacity limits filters.
-            </p>
-          </div>
-
-          <div className="space-y-3 p-6 bg-white border border-stone-200 rounded-2xl shadow-sm hover:shadow transition-shadow">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 font-bold text-lg">
-              2
-            </div>
-            <h3 className="font-serif font-bold text-stone-900">Book Date & Slot</h3>
-            <p className="text-stone-500 text-xs font-light leading-relaxed">
-              Verify slot availability instantly, select your menu package, submit booking details, and block your date.
-            </p>
-          </div>
-
-          <div className="space-y-3 p-6 bg-white border border-stone-200 rounded-2xl shadow-sm hover:shadow transition-shadow">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 font-bold text-lg">
-              3
-            </div>
-            <h3 className="font-serif font-bold text-stone-900">Celebrate Dreams</h3>
-            <p className="text-stone-500 text-xs font-light leading-relaxed">
-              Upload payment receipt, coordinate setup plans with venue manager vendors, and host a celebration of a lifetime!
-            </p>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* ── 5. STATS BAR ───────────────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-rose-600 to-pink-500 rounded-3xl p-8 sm:p-12 text-white shadow-xl flex flex-col sm:flex-row justify-around text-center gap-8 relative overflow-hidden select-none">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
-          <div className="space-y-1 relative z-10">
-            <h4 className="text-3xl sm:text-4xl font-serif font-bold">500+</h4>
-            <p className="text-xs text-rose-100 font-medium uppercase tracking-wider">Premium Venues</p>
-          </div>
-          <div className="space-y-1 relative z-10">
-            <h4 className="text-3xl sm:text-4xl font-serif font-bold">10,000+</h4>
-            <p className="text-xs text-rose-100 font-medium uppercase tracking-wider">Happy Couples</p>
-          </div>
-          <div className="space-y-1 relative z-10">
-            <h4 className="text-3xl sm:text-4xl font-serif font-bold">50+</h4>
-            <p className="text-xs text-rose-100 font-medium uppercase tracking-wider">Pakistani Cities</p>
-          </div>
+      {/* ── 4. HOW IT WORKS ───────────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <span className="eyebrow">How it works</span>
+          <h2 className="section-title mt-3">Booking made effortless</h2>
+        </Reveal>
+
+        <div className="relative mt-14 grid gap-6 md:grid-cols-3">
+          <div className="absolute left-[16%] right-[16%] top-8 hidden h-px bg-gradient-to-r from-transparent via-rose-300 to-transparent md:block" aria-hidden="true" />
+          {STEPS.map((s, i) => (
+            <Reveal key={s.title} delay={i * 120} className="relative text-center">
+              <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-white text-rose-600 shadow-lift ring-1 ring-stone-900/5">
+                <s.icon className="h-7 w-7" />
+                <span className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-stone-900 text-[11px] font-bold text-white">
+                  {i + 1}
+                </span>
+              </div>
+              <h3 className="mt-6 font-serif text-xl font-semibold text-stone-900">{s.title}</h3>
+              <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-stone-500">{s.text}</p>
+            </Reveal>
+          ))}
         </div>
       </section>
 
-      {/* ── 6. CTA BANNER (ARE YOU A HALL OWNER) ──────────────────────── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-stone-900 border border-stone-850 rounded-3xl p-8 sm:p-12 text-stone-100 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_0.5px,transparent_0.5px)] [background-size:24px_24px] opacity-[0.02]" />
-          <div className="space-y-3 relative z-10 max-w-xl text-center md:text-left">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 uppercase tracking-widest">
-              <Building2 className="h-4 w-4" /> Partner With ShaadiSpaces
+      {/* ── 5. WHY WEDEASE (bento) ────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Reveal className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-600 to-rose-900 p-8 text-white shadow-lift md:row-span-2">
+            <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gold-300/20 blur-3xl" aria-hidden="true" />
+            <span className="eyebrow text-rose-100">Why WedEase</span>
+            <h2 className="mt-4 font-serif text-3xl font-semibold leading-tight sm:text-4xl">
+              Less stress, more celebration.
+            </h2>
+            <p className="mt-4 text-rose-100/90">
+              We bring the whole venue hunt online — so you can spend your energy on what matters.
+            </p>
+            <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-white/15 pt-6">
+              {STATS.map((s) => (
+                <div key={s.label}>
+                  <dt className="sr-only">{s.label}</dt>
+                  <dd className="font-serif text-2xl font-semibold sm:text-3xl">{s.value}</dd>
+                  <dd className="mt-1 text-xs text-rose-100/80">{s.label}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+
+          {FEATURES.map((f, i) => (
+            <Reveal
+              key={f.title}
+              delay={i * 80}
+              className={`group rounded-3xl bg-white p-7 shadow-soft ring-1 ring-stone-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift ${f.wide ? 'md:col-span-2' : ''}`}
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-rose-50 text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white">
+                <f.icon className="h-5 w-5" />
+              </span>
+              <h3 className="mt-5 font-serif text-lg font-semibold text-stone-900">{f.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-stone-500">{f.text}</p>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 6. VENDOR CTA ─────────────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
+        <Reveal className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-6 py-14 text-center sm:px-12 lg:py-20">
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-rose-600/30 blur-3xl" />
+            <div className="absolute -bottom-24 -right-10 h-72 w-72 rounded-full bg-gold-400/20 blur-3xl" />
+            <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:22px_22px]" />
+          </div>
+          <div className="relative mx-auto max-w-2xl">
+            <span className="eyebrow text-gold-300">
+              <Building2 className="h-4 w-4" /> For venue owners
             </span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold">
-              Are you a Hall or Venue Owner?
-            </h3>
-            <p className="text-stone-400 text-xs sm:text-sm font-light leading-relaxed">
-              List your banquet halls, lawns, or marquees on Pakistan's premier wedding portal. Coordinate bookings, secure online deposits, and manage schedules with our free admin workspace dashboard.
+            <h2 className="mt-4 font-serif text-3xl font-semibold text-white sm:text-5xl">
+              Fill your calendar with <span className="italic text-gold-300">WedEase</span>
+            </h2>
+            <p className="mx-auto mt-4 max-w-lg text-stone-400">
+              List your hall, lawn or marquee for free. Manage bookings, deposits and schedules
+              from a beautiful vendor dashboard.
             </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                to="/register"
+                className="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-b from-gold-300 to-gold-500 px-7 text-sm font-semibold text-stone-900 shadow-lg shadow-gold-500/20 transition-all hover:brightness-105 active:scale-95"
+              >
+                List your venue <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-7 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                Vendor login
+              </Link>
+            </div>
           </div>
-
-          <Button
-            onClick={() => navigate('/register')}
-            variant="primary"
-            className="py-3.5 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 relative z-10 shrink-0 self-center"
-          >
-            List Your Venue <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
+        </Reveal>
       </section>
     </div>
   );

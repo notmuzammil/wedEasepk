@@ -1,5 +1,7 @@
 import React, { forwardRef } from 'react';
 import PropTypes from 'prop-types';
+import { ChevronDown } from 'lucide-react';
+import { labelClass, fieldBase, fieldState, errorClass } from './fieldStyles';
 
 /**
  * Styled native select dropdown with label and error state.
@@ -15,37 +17,33 @@ export const Select = forwardRef(function Select(
   const selectId = id || `select-${label?.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-stone-700">
+        <label htmlFor={selectId} className={labelClass}>
           {label}
         </label>
       )}
 
-      <select
-        ref={ref}
-        id={selectId}
-        className={`
-          block w-full rounded-lg border bg-white px-3 py-2 text-sm text-stone-900
-          transition-colors appearance-none
-          focus:outline-none focus:ring-2 focus:ring-offset-0
-          ${error
-            ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
-            : 'border-stone-300 focus:border-rose-500 focus:ring-rose-200'}
-        `}
-        aria-invalid={!!error}
-        {...rest}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          ref={ref}
+          id={selectId}
+          className={`${fieldBase} ${fieldState(error)} h-11 appearance-none pr-10 cursor-pointer`}
+          aria-invalid={!!error}
+          {...rest}
+        >
+          {placeholder && <option value="">{placeholder}</option>}
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+      </div>
 
       {error && (
-        <p className="text-xs text-red-600" role="alert">{error}</p>
+        <p className={errorClass} role="alert">{error}</p>
       )}
     </div>
   );

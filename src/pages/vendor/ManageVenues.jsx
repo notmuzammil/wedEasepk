@@ -155,7 +155,7 @@ export default function ManageVenues() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none">
+    <div className="max-w-6xl mx-auto space-y-8">
       
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">

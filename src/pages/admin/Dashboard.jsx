@@ -4,14 +4,13 @@ import { Users, Store, Calendar, ShieldAlert, Sparkles, Check, X, BarChart2, Pie
 import { supabase } from '../../lib/supabaseClient';
 import { formatDate } from '../../utils/formatDate';
 import { useUiStore } from '../../store/uiStore';
-import { Badge } from '../../components/ui/Badge';
 import { Spinner } from '../../components/ui/Spinner';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 
-const CHART_COLORS = ['#e11d48', '#0F4C3A', '#D4AF37', '#2563eb', '#7c3aed', '#db2777'];
+const CHART_COLORS = ['#b8345a', '#c99a3a', '#326857', '#6c2139', '#e27b95', '#8c5f28'];
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
@@ -170,11 +169,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none font-sans">
+    <div className="max-w-6xl mx-auto space-y-8 font-sans">
       
       {/* Greetings banner */}
       <div className="bg-gradient-to-br from-stone-900 to-stone-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#e11d48_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#b8345a_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
         <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-rose-500/10 blur-3xl" />
         
         <div className="relative space-y-2.5">
@@ -242,7 +241,7 @@ export default function AdminDashboard() {
                 <XAxis dataKey="month" stroke="#9ca3af" fontSize={11} tickLine={false} />
                 <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} allowDecimals={false} />
                 <Tooltip cursor={{ fill: '#f5f5f5' }} />
-                <Bar dataKey="Bookings" fill="#e11d48" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Bookings" fill="#b8345a" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

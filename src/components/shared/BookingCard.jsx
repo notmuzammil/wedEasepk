@@ -45,7 +45,7 @@ export const BookingCard = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-stone-100 pb-3 gap-2">
         <div>
-          <h4 className="font-serif text-lg font-bold text-emerald-950">
+          <h4 className="font-serif text-lg font-bold text-stone-900">
             {venue?.name || 'Wedding Venue'}
           </h4>
           <p className="text-xs text-stone-500 font-medium">
@@ -88,7 +88,7 @@ export const BookingCard = ({
           <CreditCard className="h-4 w-4 text-emerald-700" />
           <div className="flex flex-col">
             <span className="text-[10px] text-stone-400 uppercase font-semibold">Total Price</span>
-            <span className="font-bold text-emerald-950">{formatCurrency(total_price)}</span>
+            <span className="font-bold text-stone-900">{formatCurrency(total_price)}</span>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ export const BookingCard = ({
             href={receipt_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-emerald-800 hover:text-emerald-900 hover:underline font-semibold"
+            className="inline-flex items-center gap-1.5 text-xs text-rose-700 hover:text-rose-800 hover:underline font-semibold"
           >
             <Image className="h-4 w-4" /> View Payment Receipt <ExternalLink className="h-3 w-3" />
           </a>
@@ -121,7 +121,7 @@ export const BookingCard = ({
           
           {/* Customer Upload Receipt Trigger */}
           {role === 'customer' && status === 'approved' && payment_status === 'unpaid' && (
-            <label className="inline-flex items-center justify-center bg-gold-500 hover:bg-gold-600 text-emerald-950 text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer shadow-sm">
+            <label className="inline-flex items-center justify-center bg-gold-500 hover:bg-gold-600 text-stone-900 text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer shadow-sm">
               {isUploadingReceipt ? 'Uploading...' : 'Upload Receipt'}
               <input
                 type="file"

@@ -1,242 +1,300 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { MapPin, Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, LayoutList } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  MapPin, Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight,
+  LayoutGrid, LayoutList, Calendar, Users, RotateCcw, Check, SearchX,
+} from 'lucide-react';
 import { useVenuesList } from '../../hooks/useVenues';
 import VenueCard from '../../components/shared/VenueCard';
 import VenueCardSkeleton from '../../components/shared/VenueCardSkeleton';
-import { PAKISTAN_CITIES, AMENITIES } from '../../utils/constants';
+import { EmptyState } from '../../components/ui';
+import { PAKISTAN_CITIES, AMENITIES, VENUE_TYPES } from '../../utils/constants';
+import { formatPKRCompact } from '../../utils/venue';
+import { formatShortDate } from '../../utils/formatters';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const PRICE_MIN = 50_000;
-const PRICE_MAX = 5_000_000;
-const CAPACITY_MIN = 50;
+// Budget is per plate — typical Pakistani wedding menus sit between Rs 1k and 8k.
+const PRICE_MIN = 0;
+const PRICE_MAX = 10_000;
+const PRICE_STEP = 250;
+const CAPACITY_MIN = 0;
 const CAPACITY_MAX = 3000;
 const PAGE_LIMIT = 12;
 
 const SORT_OPTIONS = [
-  { value: 'newest',     label: 'Newest First' },
-  { value: 'price_asc',  label: 'Price: Low → High' },
-  { value: 'price_desc', label: 'Price: High → Low' },
+  { value: 'newest',     label: 'Newest first' },
+  { value: 'price_asc',  label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
 ];
 
-function formatPKR(n) {
-  if (n >= 1_000_000) return `₨${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `₨${Math.round(n / 1_000)}K`;
-  return `₨${n}`;
+const DEFAULT_FILTERS = {
+  city: '', query: '', type: '', date: '',
+  minPrice: PRICE_MIN, maxPrice: PRICE_MAX, minCapacity: CAPACITY_MIN,
+  amenities: [], sort: 'newest', page: 1,
+};
+
+// ─── URL param helpers (the URL is the single source of truth) ───────────────
+function num(params, key, fallback) {
+  const raw = params.get(key);
+  const n = raw === null ? NaN : Number(raw);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-// ─── URL param helpers ────────────────────────────────────────────────────────
 function paramsToFilters(params) {
   return {
-    city:        params.get('city')       || '',
-    query:       params.get('q')          || '',
-    minPrice:    params.get('minPrice')   ? Number(params.get('minPrice'))   : PRICE_MIN,
-    maxPrice:    params.get('maxPrice')   ? Number(params.get('maxPrice'))   : PRICE_MAX,
-    minCapacity: params.get('minCap')     ? Number(params.get('minCap'))     : CAPACITY_MIN,
-    amenities:   params.get('amenities')  ? params.get('amenities').split(',') : [],
-    sort:        params.get('sort')       || 'newest',
-    page:        params.get('page')       ? Number(params.get('page'))       : 1,
+    city:        params.get('city') || '',
+    query:       params.get('q')    || '',
+    type:        params.get('type') || '',
+    date:        params.get('date') || '',
+    minPrice:    num(params, 'minPrice', PRICE_MIN),
+    maxPrice:    num(params, 'maxPrice', PRICE_MAX),
+    // `guests` kept as an alias for older links
+    minCapacity: num(params, 'minCap', num(params, 'guests', CAPACITY_MIN)),
+    amenities:   params.get('amenities') ? params.get('amenities').split(',').filter(Boolean) : [],
+    sort:        params.get('sort') || 'newest',
+    page:        Math.max(1, num(params, 'page', 1)),
   };
 }
 
-function filtersToParams(filters) {
+function filtersToParams(f) {
   const p = {};
-  if (filters.city)                                  p.city     = filters.city;
-  if (filters.query)                                 p.q        = filters.query;
-  if (filters.minPrice  && filters.minPrice  !== PRICE_MIN)    p.minPrice = filters.minPrice;
-  if (filters.maxPrice  && filters.maxPrice  !== PRICE_MAX)    p.maxPrice = filters.maxPrice;
-  if (filters.minCapacity && filters.minCapacity !== CAPACITY_MIN) p.minCap = filters.minCapacity;
-  if (filters.amenities && filters.amenities.length)           p.amenities = filters.amenities.join(',');
-  if (filters.sort      && filters.sort !== 'newest')          p.sort     = filters.sort;
-  if (filters.page      && filters.page  !== 1)                p.page     = filters.page;
+  if (f.city)                                p.city = f.city;
+  if (f.query)                               p.q = f.query;
+  if (f.type)                                p.type = f.type;
+  if (f.date)                                p.date = f.date;
+  if (f.minPrice !== PRICE_MIN)              p.minPrice = f.minPrice;
+  if (f.maxPrice !== PRICE_MAX)              p.maxPrice = f.maxPrice;
+  if (f.minCapacity > CAPACITY_MIN)          p.minCap = f.minCapacity;
+  if (f.amenities.length)                    p.amenities = f.amenities.join(',');
+  if (f.sort !== 'newest')                   p.sort = f.sort;
+  if (f.page > 1)                            p.page = f.page;
   return p;
 }
 
-// ─── Price Range Slider ───────────────────────────────────────────────────────
+/** Only send filters that actually narrow results to the API. */
+function toQuery(f) {
+  return {
+    city: f.city || undefined,
+    query: f.query || undefined,
+    type: f.type || undefined,
+    minPrice: f.minPrice > PRICE_MIN ? f.minPrice : undefined,
+    maxPrice: f.maxPrice < PRICE_MAX ? f.maxPrice : undefined,
+    minCapacity: f.minCapacity > CAPACITY_MIN ? f.minCapacity : undefined,
+    amenities: f.amenities,
+    sort: f.sort,
+    page: f.page,
+    limit: PAGE_LIMIT,
+  };
+}
+
+const priceLabel = (v, isMax) => (isMax && v >= PRICE_MAX ? `${formatPKRCompact(v)}+` : formatPKRCompact(v));
+
+// ─── Dual range slider ───────────────────────────────────────────────────────
 function PriceSlider({ min, max, onMinChange, onMaxChange }) {
+  const pct = (v) => ((v - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
   return (
-    <div className="price-slider">
-      <div className="price-labels">
-        <span>{formatPKR(min)}</span>
-        <span>{formatPKR(max)}</span>
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-2 text-sm">
+        <span className="rounded-lg bg-stone-100 px-2.5 py-1 font-semibold text-stone-800">{priceLabel(min)}</span>
+        <span className="h-px flex-1 bg-stone-200" />
+        <span className="rounded-lg bg-stone-100 px-2.5 py-1 font-semibold text-stone-800">{priceLabel(max, true)}</span>
       </div>
-      <div className="range-track">
-        <input
-          type="range"
-          min={PRICE_MIN}
-          max={PRICE_MAX}
-          step={50_000}
-          value={min}
-          onChange={e => onMinChange(Math.min(Number(e.target.value), max - 50_000))}
-          className="range-input range-input--min"
+      <div className="relative h-5">
+        <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-stone-200" />
+        <div
+          className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-gradient-to-r from-rose-400 to-rose-600"
+          style={{ left: `${pct(min)}%`, right: `${100 - pct(max)}%` }}
         />
         <input
-          type="range"
-          min={PRICE_MIN}
-          max={PRICE_MAX}
-          step={50_000}
-          value={max}
-          onChange={e => onMaxChange(Math.max(Number(e.target.value), min + 50_000))}
-          className="range-input range-input--max"
+          type="range" min={PRICE_MIN} max={PRICE_MAX} step={PRICE_STEP} value={min}
+          onChange={(e) => onMinChange(Math.min(Number(e.target.value), max - PRICE_STEP))}
+          className="range-thumb" aria-label="Minimum price per plate"
+        />
+        <input
+          type="range" min={PRICE_MIN} max={PRICE_MAX} step={PRICE_STEP} value={max}
+          onChange={(e) => onMaxChange(Math.max(Number(e.target.value), min + PRICE_STEP))}
+          className="range-thumb" aria-label="Maximum price per plate"
         />
       </div>
     </div>
   );
 }
 
-// ─── Capacity Slider ──────────────────────────────────────────────────────────
 function CapacitySlider({ value, onChange }) {
+  const pct = (value / CAPACITY_MAX) * 100;
   return (
-    <div className="price-slider">
-      <div className="price-labels">
-        <span>Min {value} guests</span>
+    <div>
+      <p className="mb-3 text-sm text-stone-600">
+        {value > 0 ? <>At least <strong className="text-stone-900">{value.toLocaleString()}</strong> guests</> : 'Any size'}
+      </p>
+      <div className="relative h-5">
+        <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-stone-200" />
+        <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-gradient-to-r from-rose-400 to-rose-600" style={{ width: `${pct}%` }} />
+        <input
+          type="range" min={CAPACITY_MIN} max={CAPACITY_MAX} step={50} value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="range-thumb" aria-label="Minimum guest capacity"
+        />
       </div>
-      <input
-        type="range"
-        min={CAPACITY_MIN}
-        max={CAPACITY_MAX}
-        step={50}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="range-input"
-        style={{ width: '100%' }}
-      />
     </div>
   );
 }
 
-// ─── Filter Panel ─────────────────────────────────────────────────────────────
-function FilterPanel({ filters, draft, setDraft, onApply, onReset, isOpen, onClose }) {
-  const noneActive =
-    !filters.city &&
-    filters.minPrice === PRICE_MIN &&
-    filters.maxPrice === PRICE_MAX &&
-    filters.minCapacity === CAPACITY_MIN &&
-    filters.amenities.length === 0;
+// ─── Filter panel ────────────────────────────────────────────────────────────
+function FilterSection({ title, children }) {
+  return (
+    <section className="border-t border-stone-100 py-5 first:border-t-0 first:pt-0">
+      <h3 className="mb-3 font-sans text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">{title}</h3>
+      {children}
+    </section>
+  );
+}
 
+function FilterPanel({ draft, setDraft, onApply, onReset, isDirty, isOpen, onClose }) {
   function toggleAmenity(id) {
-    setDraft(prev => ({
+    setDraft((prev) => ({
       ...prev,
-      amenities: prev.amenities.includes(id)
-        ? prev.amenities.filter(a => a !== id)
-        : [...prev.amenities, id],
+      amenities: prev.amenities.includes(id) ? prev.amenities.filter((a) => a !== id) : [...prev.amenities, id],
     }));
   }
+
+  const body = (
+    <>
+      <FilterSection title="City">
+        <div className="flex flex-wrap gap-2">
+          {PAKISTAN_CITIES.map((c) => {
+            const active = draft.city === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setDraft((prev) => ({ ...prev, city: active ? '' : c }))}
+                className={`rounded-full border px-3 py-1.5 text-[13px] font-medium transition-all active:scale-95 ${
+                  active
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : 'border-stone-200 bg-white text-stone-700 hover:border-stone-400'
+                }`}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Budget per plate">
+        <PriceSlider
+          min={draft.minPrice}
+          max={draft.maxPrice}
+          onMinChange={(v) => setDraft((prev) => ({ ...prev, minPrice: v }))}
+          onMaxChange={(v) => setDraft((prev) => ({ ...prev, maxPrice: v }))}
+        />
+      </FilterSection>
+
+      <FilterSection title="Guest capacity">
+        <CapacitySlider value={draft.minCapacity} onChange={(v) => setDraft((prev) => ({ ...prev, minCapacity: v }))} />
+      </FilterSection>
+
+      <FilterSection title="Amenities">
+        <div className="flex flex-wrap gap-2">
+          {AMENITIES.map((a) => {
+            const active = draft.amenities.includes(a.id);
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => toggleAmenity(a.id)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-medium transition-all active:scale-95 ${
+                  active
+                    ? 'border-rose-300 bg-rose-50 text-rose-800'
+                    : 'border-stone-200 bg-white text-stone-700 hover:border-stone-400'
+                }`}
+              >
+                {active && <Check className="h-3.5 w-3.5" />}
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
+    </>
+  );
 
   return (
     <>
       {/* Mobile backdrop */}
-      {isOpen && <div className="filter-backdrop" onClick={onClose} />}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-sm lg:hidden animate-in fade-in-0" onClick={onClose} />
+      )}
 
-      <aside className={`filter-panel ${isOpen ? 'filter-panel--open' : ''}`}>
-        <div className="filter-header">
-          <h2 className="filter-title">
-            <SlidersHorizontal size={18} />
-            Filters
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 flex w-[88%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out
+          lg:static lg:z-0 lg:h-auto lg:w-72 lg:[@media(min-height:760px)]:sticky lg:[@media(min-height:760px)]:top-[12.5rem] lg:[@media(min-height:760px)]:max-h-[calc(100vh-14rem)] lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:rounded-3xl lg:shadow-soft lg:ring-1 lg:ring-stone-900/5
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+        aria-label="Filters"
+      >
+        <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
+          <h2 className="flex items-center gap-2 font-sans text-base font-semibold text-stone-900">
+            <SlidersHorizontal className="h-4 w-4" /> Filters
           </h2>
-          {!noneActive && (
-            <button className="filter-reset-btn" onClick={onReset}>
-              Reset all
+          <div className="flex items-center gap-1">
+            {isDirty && (
+              <button onClick={onReset} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50">
+                <RotateCcw className="h-3 w-3" /> Reset
+              </button>
+            )}
+            <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-stone-500 hover:bg-stone-100 lg:hidden" aria-label="Close filters">
+              <X className="h-5 w-5" />
             </button>
-          )}
-          <button className="filter-close-btn" onClick={onClose} aria-label="Close filters">
-            <X size={20} />
-          </button>
+          </div>
         </div>
 
-        {/* City ──────────────────────────────────── */}
-        <section className="filter-section">
-          <h3 className="filter-section-title">City</h3>
-          <div className="city-pill-grid">
-            {PAKISTAN_CITIES.map(c => (
-              <button
-                key={c}
-                className={`city-pill ${draft.city === c ? 'city-pill--active' : ''}`}
-                onClick={() => setDraft(prev => ({ ...prev, city: prev.city === c ? '' : c, page: 1 }))}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </section>
+        <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-none">{body}</div>
 
-        {/* Price ─────────────────────────────────── */}
-        <section className="filter-section">
-          <h3 className="filter-section-title">Price per plate</h3>
-          <PriceSlider
-            min={draft.minPrice}
-            max={draft.maxPrice}
-            onMinChange={v => setDraft(prev => ({ ...prev, minPrice: v, page: 1 }))}
-            onMaxChange={v => setDraft(prev => ({ ...prev, maxPrice: v, page: 1 }))}
-          />
-        </section>
-
-        {/* Capacity ───────────────────────────────── */}
-        <section className="filter-section">
-          <h3 className="filter-section-title">Minimum capacity</h3>
-          <CapacitySlider
-            value={draft.minCapacity}
-            onChange={v => setDraft(prev => ({ ...prev, minCapacity: v, page: 1 }))}
-          />
-        </section>
-
-        {/* Amenities ──────────────────────────────── */}
-        <section className="filter-section">
-          <h3 className="filter-section-title">Amenities</h3>
-          <div className="amenities-list">
-            {AMENITIES.map(a => (
-              <label key={a.id} className="amenity-row">
-                <input
-                  type="checkbox"
-                  className="amenity-checkbox"
-                  checked={draft.amenities.includes(a.id)}
-                  onChange={() => toggleAmenity(a.id)}
-                />
-                <span className="amenity-label">{a.label}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <button className="apply-btn" onClick={onApply}>
-          Apply Filters
-        </button>
+        <div className="border-t border-stone-100 p-4">
+          <button
+            onClick={onApply}
+            className="h-11 w-full rounded-xl bg-stone-900 text-sm font-semibold text-white shadow-soft transition-all hover:bg-rose-700 active:scale-[0.98]"
+          >
+            Show results
+          </button>
+        </div>
       </aside>
     </>
   );
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
+// ─── Pagination ──────────────────────────────────────────────────────────────
 function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   const pages = [];
-  const start = Math.max(1, page - 2);
-  const end   = Math.min(totalPages, page + 2);
+  const start = Math.max(1, page - 1);
+  const end   = Math.min(totalPages, page + 1);
   for (let i = start; i <= end; i++) pages.push(i);
 
+  const btn = 'grid h-10 min-w-10 place-items-center rounded-full px-3 text-sm font-semibold transition-all';
+
   return (
-    <nav className="pagination" aria-label="Page navigation">
-      <button
-        className="page-btn"
-        disabled={page === 1}
-        onClick={() => onPageChange(page - 1)}
-        aria-label="Previous page"
-      >
-        <ChevronLeft size={16} />
+    <nav className="mt-12 flex items-center justify-center gap-1.5" aria-label="Page navigation">
+      <button className={`${btn} text-stone-600 hover:bg-white hover:shadow-soft disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none`} disabled={page === 1} onClick={() => onPageChange(page - 1)} aria-label="Previous page">
+        <ChevronLeft className="h-4 w-4" />
       </button>
 
       {start > 1 && (
         <>
-          <button className="page-btn" onClick={() => onPageChange(1)}>1</button>
-          {start > 2 && <span className="page-ellipsis">…</span>}
+          <button className={`${btn} text-stone-600 hover:bg-white hover:shadow-soft`} onClick={() => onPageChange(1)}>1</button>
+          {start > 2 && <span className="px-1 text-stone-400">…</span>}
         </>
       )}
 
-      {pages.map(p => (
+      {pages.map((p) => (
         <button
           key={p}
-          className={`page-btn ${p === page ? 'page-btn--active' : ''}`}
+          className={`${btn} ${p === page ? 'bg-stone-900 text-white shadow-soft' : 'text-stone-600 hover:bg-white hover:shadow-soft'}`}
           onClick={() => onPageChange(p)}
           aria-current={p === page ? 'page' : undefined}
         >
@@ -246,837 +304,333 @@ function Pagination({ page, totalPages, onPageChange }) {
 
       {end < totalPages && (
         <>
-          {end < totalPages - 1 && <span className="page-ellipsis">…</span>}
-          <button className="page-btn" onClick={() => onPageChange(totalPages)}>{totalPages}</button>
+          {end < totalPages - 1 && <span className="px-1 text-stone-400">…</span>}
+          <button className={`${btn} text-stone-600 hover:bg-white hover:shadow-soft`} onClick={() => onPageChange(totalPages)}>{totalPages}</button>
         </>
       )}
 
-      <button
-        className="page-btn"
-        disabled={page === totalPages}
-        onClick={() => onPageChange(page + 1)}
-        aria-label="Next page"
-      >
-        <ChevronRight size={16} />
+      <button className={`${btn} text-stone-600 hover:bg-white hover:shadow-soft disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none`} disabled={page === totalPages} onClick={() => onPageChange(page + 1)} aria-label="Next page">
+        <ChevronRight className="h-4 w-4" />
       </button>
     </nav>
   );
 }
 
-// ─── Main Page Component ──────────────────────────────────────────────────────
+function Chip({ children, onRemove }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-3 pr-1 text-[13px] font-medium text-stone-700 shadow-sm ring-1 ring-stone-900/10 animate-in fade-in-0 zoom-in-95">
+      {children}
+      <button onClick={onRemove} className="grid h-5 w-5 place-items-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-800" aria-label="Remove filter">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
+// ─── Main Page Component ─────────────────────────────────────────────────────
 export default function VenueListingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const paramsKey = searchParams.toString();
 
-  // Sync state from URL
-  const [filters, setFilters] = useState(() => paramsToFilters(searchParams));
-  // Draft state (edited in sidebar before Apply)
+  const filters = useMemo(() => paramsToFilters(searchParams), [paramsKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [draft, setDraft] = useState(filters);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [searchInput, setSearchInput] = useState(filters.query);
 
-  // Push filter changes to URL
-  const syncUrl = useCallback((f) => {
-    setSearchParams(filtersToParams(f), { replace: true });
-  }, [setSearchParams]);
+  // Keep the draft panel and search box in step with the URL (incl. back/forward & external links)
+  useEffect(() => {
+    setDraft(filters);
+    setSearchInput(filters.query);
+  }, [filters]);
 
-  // Fetch data
-  const { data: result, isLoading, isFetching, isError } = useVenuesList({
-    ...filters,
-    limit: PAGE_LIMIT,
-  });
+  // Lock page scroll while the mobile filter drawer is open
+  useEffect(() => {
+    document.body.style.overflow = isSidebarOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isSidebarOpen]);
+
+  const setFilters = (updater) => {
+    const next = typeof updater === 'function' ? updater(filters) : updater;
+    setSearchParams(filtersToParams(next), { replace: true });
+  };
+
+  const { data: result, isLoading, isFetching, isError, refetch } = useVenuesList(toQuery(filters));
 
   const venues      = result?.data  || [];
   const totalCount  = result?.count || 0;
   const totalPages  = Math.ceil(totalCount / PAGE_LIMIT);
 
-  // Sync URL on filter change
-  useEffect(() => {
-    syncUrl(filters);
-    setDraft(filters);
-  }, [filters, syncUrl]);
-
-  // Keep search input in sync when URL changes externally
-  useEffect(() => {
-    const fromUrl = paramsToFilters(searchParams);
-    setFilters(fromUrl);
-    setSearchInput(fromUrl.query);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // only on mount
-
   function handleApply() {
-    setFilters({ ...draft, page: 1 });
+    setFilters({ ...draft, query: filters.query, page: 1 });
     setIsSidebarOpen(false);
   }
 
   function handleReset() {
-    const fresh = {
-      city: '', query: '', minPrice: PRICE_MIN, maxPrice: PRICE_MAX,
-      minCapacity: CAPACITY_MIN, amenities: [], sort: 'newest', page: 1,
-    };
-    setDraft(fresh);
-    setFilters(fresh);
-    setSearchInput('');
+    setFilters({ ...DEFAULT_FILTERS, sort: filters.sort });
     setIsSidebarOpen(false);
   }
 
-  function handleSortChange(sort) {
-    setFilters(prev => ({ ...prev, sort, page: 1 }));
-  }
-
   function handlePageChange(page) {
-    setFilters(prev => ({ ...prev, page }));
+    setFilters((prev) => ({ ...prev, page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function handleSearchSubmit(e) {
     e.preventDefault();
-    setFilters(prev => ({ ...prev, query: searchInput.trim(), page: 1 }));
+    setFilters((prev) => ({ ...prev, query: searchInput.trim(), page: 1 }));
   }
 
+  const priceActive = filters.minPrice !== PRICE_MIN || filters.maxPrice !== PRICE_MAX;
   const activeFilterCount = [
     filters.city,
     filters.query,
-    filters.minPrice !== PRICE_MIN || filters.maxPrice !== PRICE_MAX,
-    filters.minCapacity !== CAPACITY_MIN,
+    filters.type,
+    priceActive,
+    filters.minCapacity > CAPACITY_MIN,
     ...filters.amenities,
   ].filter(Boolean).length;
 
-  return (
-    <div className="vlp-root">
-      {/* ── Top Search Bar ─────────────────────────── */}
-      <div className="vlp-top-bar">
-        <div className="vlp-top-bar-inner">
-          <form className="vlp-search-form" onSubmit={handleSearchSubmit}>
-            <Search size={18} className="vlp-search-icon" />
-            <input
-              id="venue-search-input"
-              type="text"
-              className="vlp-search-input"
-              placeholder="Search venues by name, city…"
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-            />
-            {searchInput && (
-              <button
-                type="button"
-                className="vlp-search-clear"
-                onClick={() => { setSearchInput(''); setFilters(prev => ({ ...prev, query: '', page: 1 })); }}
-                aria-label="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </form>
+  const draftDirty = Boolean(
+    draft.city || draft.minPrice !== PRICE_MIN || draft.maxPrice !== PRICE_MAX ||
+    draft.minCapacity > CAPACITY_MIN || draft.amenities.length
+  );
 
-          <button
-            className={`vlp-filter-toggle ${activeFilterCount > 0 ? 'vlp-filter-toggle--active' : ''}`}
-            onClick={() => setIsSidebarOpen(true)}
-            aria-label="Open filters"
-            id="open-filters-btn"
-          >
-            <SlidersHorizontal size={18} />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="filter-badge">{activeFilterCount}</span>
-            )}
-          </button>
+  return (
+    <div className="min-h-screen">
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-4 pb-2 pt-8 sm:px-6 lg:px-8">
+        <span className="eyebrow">Venues</span>
+        <h1 className="mt-2 font-serif text-3xl font-semibold text-stone-900 sm:text-4xl">
+          {filters.city ? <>Wedding venues in <span className="italic text-rose-700">{filters.city}</span></> : 'Find your perfect venue'}
+        </h1>
+      </div>
+
+      {/* ── Sticky search + type bar ───────────────────────── */}
+      <div className="sticky top-16 z-30 border-b border-stone-900/5 bg-ivory/85 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl space-y-3 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex gap-2">
+            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <input
+                id="venue-search-input"
+                type="search"
+                className="h-12 w-full rounded-full border border-stone-200 bg-white pl-11 pr-24 text-sm text-stone-900 shadow-sm transition-all placeholder:text-stone-400 focus:border-rose-300 focus:outline-none focus:ring-4 focus:ring-rose-100"
+                placeholder="Search by venue name…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  className="absolute right-[4.5rem] top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                  onClick={() => { setSearchInput(''); setFilters((prev) => ({ ...prev, query: '', page: 1 })); }}
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <button type="submit" className="absolute right-1.5 top-1/2 h-9 -translate-y-1/2 rounded-full bg-stone-900 px-4 text-xs font-semibold text-white transition-colors hover:bg-rose-700">
+                Search
+              </button>
+            </form>
+
+            <button
+              className={`relative inline-flex h-12 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-all lg:hidden ${
+                activeFilterCount > 0 ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-800'
+              }`}
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Open filters"
+              id="open-filters-btn"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] text-white">{activeFilterCount}</span>
+              )}
+            </button>
+          </div>
+
+          {/* Type segmented chips */}
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+            {[{ value: '', label: 'All venues' }, ...VENUE_TYPES].map((t) => {
+              const active = filters.type === t.value;
+              return (
+                <button
+                  key={t.value || 'all'}
+                  onClick={() => setFilters((prev) => ({ ...prev, type: t.value, page: 1 }))}
+                  className={`shrink-0 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all active:scale-95 ${
+                    active ? 'bg-rose-600 text-white shadow-glow' : 'bg-white text-stone-600 ring-1 ring-stone-900/10 hover:text-stone-900 hover:ring-stone-900/20'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ── Active Filter Chips ─────────────────────── */}
-      {activeFilterCount > 0 && (
-        <div className="vlp-chips">
-          {filters.city && (
-            <span className="filter-chip">
-              <MapPin size={12} />
-              {filters.city}
-              <button onClick={() => setFilters(prev => ({ ...prev, city: '', page: 1 }))}><X size={12} /></button>
-            </span>
-          )}
-          {filters.query && (
-            <span className="filter-chip">
-              "{filters.query}"
-              <button onClick={() => { setSearchInput(''); setFilters(prev => ({ ...prev, query: '', page: 1 })); }}><X size={12} /></button>
-            </span>
-          )}
-          {(filters.minPrice !== PRICE_MIN || filters.maxPrice !== PRICE_MAX) && (
-            <span className="filter-chip">
-              {formatPKR(filters.minPrice)} – {formatPKR(filters.maxPrice)}
-              <button onClick={() => setFilters(prev => ({ ...prev, minPrice: PRICE_MIN, maxPrice: PRICE_MAX, page: 1 }))}><X size={12} /></button>
-            </span>
-          )}
-          {filters.minCapacity !== CAPACITY_MIN && (
-            <span className="filter-chip">
-              {filters.minCapacity}+ guests
-              <button onClick={() => setFilters(prev => ({ ...prev, minCapacity: CAPACITY_MIN, page: 1 }))}><X size={12} /></button>
-            </span>
-          )}
-          {filters.amenities.map(a => {
-            const label = AMENITIES.find(x => x.id === a)?.label || a;
-            return (
-              <span key={a} className="filter-chip">
-                {label}
-                <button onClick={() => setFilters(prev => ({ ...prev, amenities: prev.amenities.filter(x => x !== a), page: 1 }))}><X size={12} /></button>
-              </span>
-            );
-          })}
-          <button className="clear-all-chips" onClick={handleReset}>Clear all</button>
-        </div>
-      )}
-
-      {/* ── Body ───────────────────────────────────────── */}
-      <div className="vlp-body">
-        {/* Filter Panel */}
+      {/* ── Body ───────────────────────────────────────────── */}
+      <div className="mx-auto flex max-w-7xl items-start gap-8 px-4 py-6 sm:px-6 lg:px-8">
         <FilterPanel
-          filters={filters}
           draft={draft}
           setDraft={setDraft}
           onApply={handleApply}
           onReset={handleReset}
+          isDirty={draftDirty || activeFilterCount > 0}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
         />
 
-        {/* Main content */}
-        <main className="vlp-main" id="venues-main">
+        <main className="min-w-0 flex-1" id="venues-main">
           {/* Results bar */}
-          <div className="results-bar">
-            <p className="results-count">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-stone-500" aria-live="polite">
               {isLoading ? (
-                <span className="results-loading">Searching venues…</span>
+                <span className="inline-flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" /> Searching venues…</span>
+              ) : isError ? (
+                <span>Results unavailable</span>
               ) : (
                 <>
-                  <strong>{totalCount.toLocaleString()}</strong> venue{totalCount !== 1 ? 's' : ''} found
-                  {filters.city && <> in <span className="results-city">{filters.city}</span></>}
+                  <strong className="text-stone-900">{totalCount.toLocaleString()}</strong> venue{totalCount !== 1 ? 's' : ''} found
+                  {isFetching && <span className="ml-2 text-xs text-rose-600">· updating</span>}
                 </>
               )}
-              {isFetching && !isLoading && <span className="results-updating"> · updating…</span>}
             </p>
 
-            <div className="results-controls">
-              {/* Sort */}
-              <div className="sort-wrapper">
-                <label className="sort-label" htmlFor="sort-select">Sort:</label>
-                <div className="sort-select-wrap">
-                  <select
-                    id="sort-select"
-                    className="sort-select"
-                    value={filters.sort}
-                    onChange={e => handleSortChange(e.target.value)}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <select
+                  id="sort-select"
+                  aria-label="Sort venues"
+                  className="h-10 cursor-pointer appearance-none rounded-full border border-stone-200 bg-white pl-4 pr-9 text-[13px] font-semibold text-stone-700 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-4 focus:ring-rose-100"
+                  value={filters.sort}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, sort: e.target.value, page: 1 }))}
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              </div>
+
+              <div className="hidden rounded-full bg-white p-1 shadow-sm ring-1 ring-stone-900/10 sm:flex" role="group" aria-label="View mode">
+                {[
+                  { mode: 'grid', icon: LayoutGrid, id: 'grid-view-btn' },
+                  { mode: 'list', icon: LayoutList, id: 'list-view-btn' },
+                ].map(({ mode, icon: Icon, id }) => (
+                  <button
+                    key={mode}
+                    id={id}
+                    onClick={() => setViewMode(mode)}
+                    aria-label={`${mode} view`}
+                    aria-pressed={viewMode === mode}
+                    className={`grid h-8 w-8 place-items-center rounded-full transition-all ${
+                      viewMode === mode ? 'bg-stone-900 text-white' : 'text-stone-500 hover:text-stone-900'
+                    }`}
                   >
-                    {SORT_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="sort-chevron" />
-                </div>
+                    <Icon className="h-4 w-4" />
+                  </button>
+                ))}
               </div>
-
-              {/* View mode */}
-              <div className="view-toggle" role="group" aria-label="View mode">
-                <button
-                  className={`view-btn ${viewMode === 'grid' ? 'view-btn--active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                  aria-label="Grid view"
-                  id="grid-view-btn"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  className={`view-btn ${viewMode === 'list' ? 'view-btn--active' : ''}`}
-                  onClick={() => setViewMode('list')}
-                  aria-label="List view"
-                  id="list-view-btn"
-                >
-                  <LayoutList size={16} />
-                </button>
-              </div>
-
-              {/* Desktop filter toggle */}
-              <button
-                className="desktop-filter-btn"
-                onClick={() => setIsSidebarOpen(prev => !prev)}
-                id="desktop-filters-btn"
-              >
-                <SlidersHorizontal size={15} />
-                Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-              </button>
             </div>
           </div>
 
+          {/* Active filter chips */}
+          {(activeFilterCount > 0 || filters.date) && (
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              {filters.date && (
+                <Chip onRemove={() => setFilters((prev) => ({ ...prev, date: '' }))}>
+                  <Calendar className="h-3.5 w-3.5 text-rose-500" /> {formatShortDate(filters.date)}
+                </Chip>
+              )}
+              {filters.city && (
+                <Chip onRemove={() => setFilters((prev) => ({ ...prev, city: '', page: 1 }))}>
+                  <MapPin className="h-3.5 w-3.5 text-rose-500" /> {filters.city}
+                </Chip>
+              )}
+              {filters.type && (
+                <Chip onRemove={() => setFilters((prev) => ({ ...prev, type: '', page: 1 }))}>
+                  {VENUE_TYPES.find((t) => t.value === filters.type)?.label || filters.type}
+                </Chip>
+              )}
+              {filters.query && (
+                <Chip onRemove={() => setFilters((prev) => ({ ...prev, query: '', page: 1 }))}>
+                  &ldquo;{filters.query}&rdquo;
+                </Chip>
+              )}
+              {priceActive && (
+                <Chip onRemove={() => setFilters((prev) => ({ ...prev, minPrice: PRICE_MIN, maxPrice: PRICE_MAX, page: 1 }))}>
+                  {priceLabel(filters.minPrice)} – {priceLabel(filters.maxPrice, true)} / plate
+                </Chip>
+              )}
+              {filters.minCapacity > CAPACITY_MIN && (
+                <Chip onRemove={() => setFilters((prev) => ({ ...prev, minCapacity: CAPACITY_MIN, page: 1 }))}>
+                  <Users className="h-3.5 w-3.5 text-rose-500" /> {filters.minCapacity}+ guests
+                </Chip>
+              )}
+              {filters.amenities.map((a) => (
+                <Chip key={a} onRemove={() => setFilters((prev) => ({ ...prev, amenities: prev.amenities.filter((x) => x !== a), page: 1 }))}>
+                  {AMENITIES.find((x) => x.id === a)?.label || a}
+                </Chip>
+              ))}
+              {activeFilterCount > 0 && (
+                <button className="px-2 text-[13px] font-semibold text-rose-700 hover:underline" onClick={handleReset}>
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Error */}
           {isError && (
-            <div className="vlp-error">
-              <p>Something went wrong loading venues. Please try again.</p>
-              <button className="error-retry-btn" onClick={() => window.location.reload()}>Retry</button>
+            <div className="rounded-3xl bg-white ring-1 ring-stone-900/5">
+              <EmptyState
+                title="We couldn't load venues"
+                description="Something went wrong while fetching venues. Please try again."
+                action={{ label: 'Retry', onClick: () => refetch() }}
+              />
             </div>
           )}
 
           {/* Skeleton grid */}
           {isLoading && (
-            <div className={`venues-grid venues-grid--${viewMode}`}>
-              {Array.from({ length: PAGE_LIMIT }).map((_, i) => (
-                <VenueCardSkeleton key={i} />
-              ))}
+            <div className={viewMode === 'grid' ? 'grid gap-6 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-5'}>
+              {Array.from({ length: 6 }).map((_, i) => <VenueCardSkeleton key={i} />)}
             </div>
           )}
 
           {/* Real results */}
           {!isLoading && venues.length > 0 && (
-            <div className={`venues-grid venues-grid--${viewMode}`}>
-              {venues.map(venue => (
-                <VenueCard key={venue.id} venue={venue} />
+            <div className={`transition-opacity duration-300 ${isFetching ? 'opacity-60' : 'opacity-100'} ${
+              viewMode === 'grid' ? 'grid gap-6 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-5'
+            }`}>
+              {venues.map((venue, i) => (
+                <div key={venue.id} className="animate-in fade-in-0 slide-in-from-bottom-3 duration-500 fill-mode-both" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                  <VenueCard venue={venue} layout={viewMode} />
+                </div>
               ))}
             </div>
           )}
 
           {/* Empty state */}
           {!isLoading && !isError && venues.length === 0 && (
-            <div className="vlp-empty">
-              <div className="vlp-empty-icon">🔍</div>
-              <h2>No venues found</h2>
-              <p>Try adjusting your filters or searching in a different city.</p>
-              <button className="vlp-empty-reset" onClick={handleReset}>
-                Clear all filters
-              </button>
+            <div className="rounded-3xl border border-dashed border-stone-300 bg-white/60">
+              <EmptyState
+                icon={<SearchX className="h-7 w-7" />}
+                title="No venues match your search"
+                description="Try widening your budget, lowering the guest count, or searching another city."
+                action={activeFilterCount > 0 ? { label: 'Clear all filters', onClick: handleReset } : undefined}
+              />
             </div>
           )}
 
-          {/* Pagination */}
           {!isLoading && totalPages > 1 && (
-            <Pagination
-              page={filters.page}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+            <Pagination page={filters.page} totalPages={totalPages} onPageChange={handlePageChange} />
           )}
         </main>
       </div>
-
-      <style>{`
-        /* ────────────────────────────────────────────────────────
-           VenueListingPage — Scoped Styles
-        ──────────────────────────────────────────────────────── */
-        .vlp-root {
-          min-height: 100vh;
-          background: #fdf8f8;
-          font-family: 'Inter', sans-serif;
-        }
-
-        /* ── Top Search Bar ─────────────────────────────────── */
-        .vlp-top-bar {
-          background: #fff;
-          border-bottom: 1px solid #f1e8ec;
-          padding: 14px 0;
-          position: sticky;
-          top: 64px;
-          z-index: 100;
-        }
-        .vlp-top-bar-inner {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 0 24px;
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-        .vlp-search-form {
-          flex: 1;
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-        .vlp-search-icon {
-          position: absolute;
-          left: 14px;
-          color: #9ca3af;
-          pointer-events: none;
-        }
-        .vlp-search-input {
-          width: 100%;
-          padding: 10px 40px 10px 42px;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 10px;
-          font-size: 0.9rem;
-          outline: none;
-          transition: border-color 0.2s;
-          background: #f9fafb;
-        }
-        .vlp-search-input:focus {
-          border-color: #e11d48;
-          background: #fff;
-        }
-        .vlp-search-clear {
-          position: absolute;
-          right: 12px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #9ca3af;
-          display: flex;
-          padding: 4px;
-        }
-        .vlp-filter-toggle {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 10px 16px;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 10px;
-          background: #fff;
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: all 0.2s;
-          position: relative;
-        }
-        .vlp-filter-toggle--active {
-          border-color: #e11d48;
-          color: #e11d48;
-          background: #fff5f7;
-        }
-        .filter-badge {
-          background: #e11d48;
-          color: #fff;
-          border-radius: 99px;
-          font-size: 0.7rem;
-          font-weight: 600;
-          padding: 1px 6px;
-          min-width: 18px;
-          text-align: center;
-        }
-
-        /* ── Active Filter Chips ─────────────────────────── */
-        .vlp-chips {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 10px 24px;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          align-items: center;
-        }
-        .filter-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          background: #fff5f7;
-          color: #c21d47;
-          border: 1px solid #fecdd3;
-          border-radius: 99px;
-          padding: 4px 10px 4px 10px;
-          font-size: 0.8rem;
-          font-weight: 500;
-        }
-        .filter-chip button {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #e11d48;
-          display: flex;
-          padding: 0;
-          margin-left: 2px;
-        }
-        .clear-all-chips {
-          background: none;
-          border: none;
-          color: #e11d48;
-          font-size: 0.8rem;
-          font-weight: 500;
-          cursor: pointer;
-          text-decoration: underline;
-          padding: 0 6px;
-        }
-
-        /* ── Body layout ───────────────────────────────────── */
-        .vlp-body {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 24px;
-          display: flex;
-          gap: 28px;
-          align-items: flex-start;
-        }
-
-        /* ── Filter Panel ──────────────────────────────────── */
-        .filter-backdrop {
-          display: none;
-        }
-        .filter-panel {
-          width: 272px;
-          flex-shrink: 0;
-          background: #fff;
-          border: 1px solid #f1e8ec;
-          border-radius: 16px;
-          padding: 20px;
-          position: sticky;
-          top: 130px;
-          max-height: calc(100vh - 160px);
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: #fecdd3 transparent;
-        }
-        .filter-panel::-webkit-scrollbar { width: 4px; }
-        .filter-panel::-webkit-scrollbar-thumb { background: #fecdd3; border-radius: 4px; }
-
-        .filter-header {
-          display: flex;
-          align-items: center;
-          margin-bottom: 18px;
-          gap: 8px;
-        }
-        .filter-title {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: #1f2937;
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          flex: 1;
-          margin: 0;
-        }
-        .filter-reset-btn {
-          background: none;
-          border: none;
-          color: #e11d48;
-          font-size: 0.8rem;
-          cursor: pointer;
-          white-space: nowrap;
-          font-weight: 500;
-        }
-        .filter-close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #9ca3af;
-          display: flex;
-          padding: 2px;
-          display: none; /* hidden on desktop; shown on mobile */
-        }
-        .filter-section {
-          border-top: 1px solid #f3f4f6;
-          padding-top: 14px;
-          margin-top: 14px;
-        }
-        .filter-section-title {
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #6b7280;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin: 0 0 10px 0;
-        }
-
-        /* City pills */
-        .city-pill-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-        .city-pill {
-          padding: 5px 11px;
-          border-radius: 99px;
-          border: 1.5px solid #e5e7eb;
-          background: #f9fafb;
-          font-size: 0.8rem;
-          cursor: pointer;
-          transition: all 0.15s;
-          font-weight: 500;
-          color: #374151;
-        }
-        .city-pill:hover { border-color: #e11d48; color: #e11d48; }
-        .city-pill--active {
-          border-color: #e11d48;
-          background: #fff5f7;
-          color: #e11d48;
-        }
-
-        /* Price/Capacity sliders */
-        .price-slider { margin-top: 8px; }
-        .price-labels {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #374151;
-          margin-bottom: 8px;
-        }
-        .range-track { position: relative; }
-        .range-input {
-          width: 100%;
-          -webkit-appearance: none;
-          appearance: none;
-          height: 4px;
-          border-radius: 99px;
-          background: linear-gradient(to right, #fecdd3, #e11d48);
-          outline: none;
-          cursor: pointer;
-          display: block;
-          margin: 4px 0;
-        }
-        .range-input::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: #e11d48;
-          border: 2px solid #fff;
-          box-shadow: 0 1px 6px rgba(225,29,72,0.4);
-          cursor: pointer;
-        }
-
-        /* Amenities */
-        .amenities-list { display: flex; flex-direction: column; gap: 8px; }
-        .amenity-row {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          cursor: pointer;
-        }
-        .amenity-checkbox {
-          width: 16px;
-          height: 16px;
-          accent-color: #e11d48;
-          cursor: pointer;
-          flex-shrink: 0;
-        }
-        .amenity-label { font-size: 0.85rem; color: #374151; }
-
-        /* Apply button */
-        .apply-btn {
-          margin-top: 18px;
-          width: 100%;
-          padding: 11px;
-          background: linear-gradient(135deg, #e11d48, #f43f5e);
-          color: #fff;
-          border: none;
-          border-radius: 10px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity 0.2s, transform 0.2s;
-        }
-        .apply-btn:hover { opacity: 0.92; transform: translateY(-1px); }
-
-        /* ── Main Results Area ──────────────────────────────── */
-        .vlp-main { flex: 1; min-width: 0; }
-
-        .results-bar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-        .results-count { font-size: 0.9rem; color: #6b7280; margin: 0; }
-        .results-count strong { color: #111827; }
-        .results-city { color: #e11d48; font-weight: 600; }
-        .results-loading { color: #9ca3af; font-style: italic; }
-        .results-updating { color: #e11d48; font-size: 0.8rem; }
-
-        .results-controls {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        /* Sort */
-        .sort-label { font-size: 0.85rem; color: #6b7280; }
-        .sort-wrapper { display: flex; align-items: center; gap: 6px; }
-        .sort-select-wrap { position: relative; }
-        .sort-select {
-          appearance: none;
-          background: #fff;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 7px 30px 7px 11px;
-          font-size: 0.85rem;
-          color: #374151;
-          cursor: pointer;
-          outline: none;
-          font-weight: 500;
-        }
-        .sort-select:focus { border-color: #e11d48; }
-        .sort-chevron {
-          position: absolute;
-          right: 9px;
-          top: 50%;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: #9ca3af;
-        }
-
-        /* View toggle */
-        .view-toggle {
-          display: flex;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 8px;
-          overflow: hidden;
-        }
-        .view-btn {
-          background: #fff;
-          border: none;
-          padding: 7px 10px;
-          cursor: pointer;
-          color: #9ca3af;
-          display: flex;
-          align-items: center;
-          transition: all 0.15s;
-        }
-        .view-btn--active { background: #fff5f7; color: #e11d48; }
-        .view-btn:not(:last-child) { border-right: 1px solid #e5e7eb; }
-
-        /* Desktop sidebar toggle */
-        .desktop-filter-btn {
-          display: none; /* shown on larger screens below */
-          align-items: center;
-          gap: 6px;
-          padding: 7px 13px;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 8px;
-          background: #fff;
-          font-size: 0.85rem;
-          font-weight: 500;
-          cursor: pointer;
-          color: #374151;
-          transition: all 0.2s;
-        }
-        .desktop-filter-btn:hover { border-color: #e11d48; color: #e11d48; }
-
-        /* ── Venues Grid ────────────────────────────────────── */
-        .venues-grid {
-          display: grid;
-          gap: 20px;
-          margin-bottom: 32px;
-        }
-        .venues-grid--grid {
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        }
-        .venues-grid--list {
-          grid-template-columns: 1fr;
-        }
-
-        /* ── Error ──────────────────────────────────────────── */
-        .vlp-error {
-          text-align: center;
-          padding: 60px 20px;
-          color: #6b7280;
-        }
-        .error-retry-btn {
-          margin-top: 12px;
-          padding: 10px 22px;
-          background: #e11d48;
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-        }
-
-        /* ── Empty State ────────────────────────────────────── */
-        .vlp-empty {
-          text-align: center;
-          padding: 80px 20px;
-          color: #6b7280;
-        }
-        .vlp-empty-icon { font-size: 3.5rem; margin-bottom: 12px; }
-        .vlp-empty h2 { font-size: 1.3rem; color: #1f2937; margin: 0 0 8px; }
-        .vlp-empty p { font-size: 0.9rem; margin: 0 0 20px; }
-        .vlp-empty-reset {
-          padding: 10px 22px;
-          background: #e11d48;
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: opacity 0.2s;
-        }
-        .vlp-empty-reset:hover { opacity: 0.9; }
-
-        /* ── Pagination ─────────────────────────────────────── */
-        .pagination {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 6px;
-          margin-top: 16px;
-          padding-bottom: 40px;
-        }
-        .page-btn {
-          min-width: 38px;
-          height: 38px;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 8px;
-          background: #fff;
-          color: #374151;
-          font-size: 0.9rem;
-          font-weight: 500;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.15s;
-          padding: 0 4px;
-        }
-        .page-btn:hover:not(:disabled) { border-color: #e11d48; color: #e11d48; }
-        .page-btn--active {
-          background: #e11d48;
-          border-color: #e11d48;
-          color: #fff;
-        }
-        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .page-ellipsis { color: #9ca3af; padding: 0 4px; font-size: 0.9rem; }
-
-        /* ── Responsive ─────────────────────────────────────── */
-        @media (max-width: 1024px) {
-          .filter-panel {
-            position: fixed;
-            top: 0;
-            left: -310px;
-            width: 290px;
-            height: 100vh;
-            max-height: 100vh;
-            z-index: 500;
-            border-radius: 0 16px 16px 0;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
-            transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
-          }
-          .filter-panel--open {
-            left: 0;
-          }
-          .filter-backdrop {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.35);
-            z-index: 499;
-            backdrop-filter: blur(2px);
-          }
-          .filter-close-btn { display: flex; }
-          .vlp-body { padding: 16px; }
-        }
-
-        @media (max-width: 640px) {
-          .vlp-top-bar-inner { padding: 0 14px; }
-          .vlp-body { padding: 12px; gap: 0; }
-          .results-bar { flex-direction: column; align-items: flex-start; }
-          .sort-label { display: none; }
-          .venues-grid--grid {
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .venues-grid--grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   );
 }

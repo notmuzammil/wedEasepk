@@ -14,19 +14,22 @@ import { Button } from './Button';
  */
 export function EmptyState({ icon, title, description, action, className = '' }) {
   return (
-    <div className={`flex flex-col items-center justify-center py-16 text-center ${className}`}>
-      <div className="mb-4 rounded-full bg-stone-100 p-4 text-stone-400">
-        {icon || <Inbox className="h-8 w-8" />}
+    <div className={`flex flex-col items-center justify-center py-16 px-6 text-center animate-in fade-in-0 duration-500 ${className}`}>
+      <div className="relative mb-5">
+        <div className="absolute inset-0 rounded-full bg-rose-200/40 blur-xl" aria-hidden="true" />
+        <div className="relative grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-white to-rose-50 text-rose-500 ring-1 ring-rose-100 shadow-soft">
+          {icon || <Inbox className="h-7 w-7" />}
+        </div>
       </div>
 
-      <h3 className="text-base font-semibold text-stone-700">{title}</h3>
+      <h3 className="font-serif text-lg font-semibold text-stone-900">{title}</h3>
 
       {description && (
-        <p className="mt-1 max-w-sm text-sm text-stone-500">{description}</p>
+        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-stone-500">{description}</p>
       )}
 
       {action && (
-        <div className="mt-5">
+        <div className="mt-6">
           <Button variant="primary" size="sm" onClick={action.onClick}>
             {action.label}
           </Button>

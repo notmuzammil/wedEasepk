@@ -25,3 +25,4 @@ maaz-*.log
 *.njsproj
 *.sln
 *.sw?
+.vite

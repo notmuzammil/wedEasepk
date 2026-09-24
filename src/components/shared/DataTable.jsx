@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { ChevronUp, ChevronDown, ChevronsUpDown, AlertCircle } from 'lucide-react';
-import { Spinner } from '../ui/Spinner';
 
 export default function DataTable({
   columns = [],

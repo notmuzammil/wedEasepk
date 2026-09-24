@@ -14,7 +14,6 @@ import { useUiStore } from '../../store/uiStore';
 import { bookingSchema } from '../../utils/validators';
 import { BOOKING_SLOTS, AMENITIES } from '../../utils/constants';
 import { formatCurrency, getTodayDateString, formatDate } from '../../utils/formatDate';
-import { Button } from '../../components/ui/Button';
 
 // ─── Amenity icon map ─────────────────────────────────────────────────────────
 const AMENITY_ICONS = {

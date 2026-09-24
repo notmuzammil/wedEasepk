@@ -9,7 +9,6 @@ import {
   createVenue,
   updateVenue,
   updateVenueStatus,
-  uploadVenueImage,
   searchVenues,
   deleteVenue,
 } from '../services/venueService';

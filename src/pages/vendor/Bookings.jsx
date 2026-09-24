@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Calendar, Search, AlertCircle, AlertTriangle, X, RefreshCw } from 'lucide-react';
+import { Search, AlertCircle, AlertTriangle, X, RefreshCw } from 'lucide-react';
 import { useVendorBookings, useUpdateBookingStatus } from '../../hooks/useBookings';
 import { formatDate, formatCurrency } from '../../utils/formatDate';
 import { supabase } from '../../lib/supabaseClient';
@@ -193,7 +193,7 @@ export default function Bookings() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none font-sans">
+    <div className="max-w-6xl mx-auto space-y-8 font-sans">
       
       {/* Header board bar */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">

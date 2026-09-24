@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Calendar, CircleDollarSign, PlusCircle, Sparkles, AlertCircle, TrendingUp, HelpCircle } from 'lucide-react';
+import { Store, Calendar, PlusCircle, Sparkles, AlertCircle, TrendingUp, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useMyVenues } from '../../hooks/useVenues';
 import { useVendorBookings } from '../../hooks/useBookings';
@@ -108,21 +108,21 @@ export default function VendorDashboard() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none">
+    <div className="max-w-6xl mx-auto space-y-8">
       
       {/* Greetings banner */}
-      <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden select-none">
+      <div className="bg-gradient-to-br from-rose-700 via-rose-900 to-stone-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden select-none">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#d4af37_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
-        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-emerald-700/25 blur-3xl" />
+        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 rounded-full bg-rose-500/25 blur-3xl" />
         
         <div className="relative space-y-2.5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-400/10 text-gold-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-gold-500/25">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-300/10 text-gold-200 rounded-full text-[10px] font-bold uppercase tracking-widest border border-gold-500/25">
             <Sparkles className="h-3 w-3 fill-gold-400/20" /> Space Coordinator Portal
           </span>
           <h1 className="font-serif text-3xl font-bold tracking-tight">
             Assalam-o-Alaikum, {profile?.full_name || 'Vendor Host'}!
           </h1>
-          <p className="text-emerald-100/80 text-sm font-light max-w-xl leading-relaxed">
+          <p className="text-rose-100/80 text-sm font-light max-w-xl leading-relaxed">
             Monitor incoming banquet requests, manage listed halls, and evaluate seasonal revenue forecasts.
           </p>
         </div>

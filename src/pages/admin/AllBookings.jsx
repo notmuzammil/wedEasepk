@@ -119,7 +119,7 @@ const AllBookings = () => {
           padding: 9px 14px 9px 36px; border: 1.5px solid #e5e7eb; border-radius: 10px;
           font-size: 0.875rem; outline: none; width: 240px; background: #fafafa; transition: border-color 0.2s;
         }
-        .ab-search:focus { border-color: #e11d48; background: #fff; }
+        .ab-search:focus { border-color: #b8345a; background: #fff; }
 
         .ab-tabs {
           display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #f1e8ec;
@@ -131,13 +131,13 @@ const AllBookings = () => {
           color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent;
           margin-bottom: -1px; transition: all 0.15s; white-space: nowrap;
         }
-        .ab-tab:hover { color: #e11d48; }
-        .ab-tab--active { color: #e11d48; border-bottom-color: #e11d48; font-weight: 600; }
+        .ab-tab:hover { color: #b8345a; }
+        .ab-tab--active { color: #b8345a; border-bottom-color: #b8345a; font-weight: 600; }
         .ab-tab-count {
-          background: #fecdd3; color: #be123c; border-radius: 99px;
+          background: #f6d0da; color: #9a2749; border-radius: 99px;
           font-size: 0.68rem; font-weight: 700; padding: 1px 6px; min-width: 16px; text-align: center;
         }
-        .ab-tab--active .ab-tab-count { background: #e11d48; color: #fff; }
+        .ab-tab--active .ab-tab-count { background: #b8345a; color: #fff; }
 
         .ab-list { display: flex; flex-direction: column; gap: 14px; }
         .ab-skeleton {
@@ -146,7 +146,7 @@ const AllBookings = () => {
           background-size: 600px; animation: shimmer 1.4s infinite linear;
         }
         @keyframes shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
-        .ab-error { background:#fff5f5; border:1px solid #fecdd3; border-radius:12px; padding:20px; color:#be123c; text-align:center; }
+        .ab-error { background:#fff5f5; border:1px solid #f6d0da; border-radius:12px; padding:20px; color:#9a2749; text-align:center; }
         .ab-empty {
           text-align:center; padding:60px 20px; color:#9ca3af;
           display:flex; flex-direction:column; align-items:center; gap:12px; font-size:0.875rem;

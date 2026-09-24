@@ -126,7 +126,7 @@ const ManageUsers = () => {
           padding: 9px 14px 9px 36px; border: 1.5px solid #e5e7eb; border-radius: 10px;
           font-size: 0.875rem; outline: none; width: 260px; background: #fafafa; transition: border-color 0.2s;
         }
-        .user-search:focus { border-color: #e11d48; background: #fff; }
+        .user-search:focus { border-color: #b8345a; background: #fff; }
         .user-list { display: flex; flex-direction: column; gap: 10px; }
         .user-skeleton-list { display: flex; flex-direction: column; gap: 10px; }
         .user-skeleton {
@@ -143,7 +143,7 @@ const ManageUsers = () => {
         .user-row:hover { box-shadow: 0 4px 18px rgba(225,29,72,0.07); }
         .user-avatar {
           width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
-          background: linear-gradient(135deg, #e11d48, #f43f5e);
+          background: linear-gradient(135deg, #b8345a, #d14f72);
           color: #fff; font-weight: 700; font-size: 0.9rem;
           display: flex; align-items: center; justify-content: center;
         }

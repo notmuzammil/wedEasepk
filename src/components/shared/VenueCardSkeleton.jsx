@@ -1,5 +1,4 @@
 import React from 'react';
-import styles from './VenueCardSkeleton.module.css';
 
 /**
  * Animated skeleton placeholder for VenueCard.
@@ -7,19 +6,21 @@ import styles from './VenueCardSkeleton.module.css';
  */
 const VenueCardSkeleton = () => {
   return (
-    <div className={styles.card} aria-busy="true" aria-label="Loading venue">
-      <div className={styles.image} />
-      <div className={styles.body}>
-        <div className={`${styles.line} ${styles.title}`} />
-        <div className={`${styles.line} ${styles.subtitle}`} />
-        <div className={styles.row}>
-          <div className={`${styles.pill}`} />
-          <div className={`${styles.pill}`} />
-        </div>
-        <div className={styles.divider} />
-        <div className={styles.footer}>
-          <div className={`${styles.line} ${styles.price}`} />
-          <div className={styles.btn} />
+    <div
+      className="overflow-hidden rounded-3xl bg-white ring-1 ring-stone-900/5 shadow-soft"
+      aria-busy="true"
+      aria-label="Loading venue"
+    >
+      <div className="skeleton aspect-[4/3] rounded-none" />
+      <div className="space-y-3 p-5">
+        <div className="skeleton h-5 w-3/4" />
+        <div className="skeleton h-4 w-1/2" />
+        <div className="flex items-end justify-between border-t border-dashed border-stone-200 pt-4">
+          <div className="space-y-2">
+            <div className="skeleton h-3 w-16" />
+            <div className="skeleton h-5 w-24" />
+          </div>
+          <div className="skeleton h-10 w-10 rounded-full" />
         </div>
       </div>
     </div>

@@ -7,44 +7,28 @@ export default function UnauthorizedPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-6 bg-stone-50">
-      <div className="max-w-md w-full bg-white border border-stone-200 rounded-2xl shadow-lg p-8 text-center space-y-6">
-        
-        {/* Warning Icon Container */}
-        <div className="mx-auto w-16 h-16 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center justify-center shadow-inner">
+    <div className="flex min-h-[80vh] items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-lift ring-1 ring-stone-900/5 animate-fade-up sm:p-10">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-rose-50 text-rose-600 ring-1 ring-rose-100">
           <ShieldAlert className="h-8 w-8" />
         </div>
 
-        <div className="space-y-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full">
-            Error 403: Forbidden
+        <div className="mt-6 space-y-3">
+          <span className="inline-block rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-700">
+            Error 403
           </span>
-          <h1 className="text-2xl font-serif font-bold text-stone-900">
-            Access Restricted
-          </h1>
-          <p className="text-stone-500 text-sm leading-relaxed">
-            You do not have the required permissions to view this dashboard page. If you believe this is an error, please try logging back in with a different account.
+          <h1 className="font-serif text-2xl font-semibold text-stone-900">Access restricted</h1>
+          <p className="text-sm leading-relaxed text-stone-500">
+            You don&apos;t have permission to view this page. If you think this is a mistake, try signing in with a different account.
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="pt-4 flex flex-col sm:flex-row gap-3">
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button variant="outline" fullWidth onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" /> Go back
           </Button>
-
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => navigate('/')}
-            className="flex items-center justify-center"
-          >
-            <Home className="h-4 w-4 mr-2" /> Home
+          <Button variant="dark" fullWidth onClick={() => navigate('/')}>
+            <Home className="h-4 w-4" /> Home
           </Button>
         </div>
       </div>

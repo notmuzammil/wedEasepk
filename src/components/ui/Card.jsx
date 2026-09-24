@@ -9,18 +9,20 @@ const paddingMap = {
 };
 
 /**
- * White surface card with subtle border and shadow.
+ * White surface card with hairline border and soft shadow.
  * The foundational container for content sections throughout the app.
  *
  * @param {object} props
  * @param {'none'|'sm'|'md'|'lg'} [props.padding='md']
+ * @param {boolean} [props.interactive] — adds a hover lift
  */
-export function Card({ children, padding = 'md', className = '' }) {
+export function Card({ children, padding = 'md', interactive = false, className = '' }) {
   return (
     <div
       className={`
-        rounded-xl border border-stone-200 bg-white
-        shadow-sm ${paddingMap[padding]} ${className}
+        rounded-2xl border border-stone-200/80 bg-white shadow-soft
+        ${interactive ? 'transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift hover:border-stone-300/80' : ''}
+        ${paddingMap[padding]} ${className}
       `}
     >
       {children}
@@ -29,7 +31,8 @@ export function Card({ children, padding = 'md', className = '' }) {
 }
 
 Card.propTypes = {
-  children:  PropTypes.node.isRequired,
-  padding:   PropTypes.oneOf(['none', 'sm', 'md', 'lg']),
-  className: PropTypes.string,
+  children:    PropTypes.node.isRequired,
+  padding:     PropTypes.oneOf(['none', 'sm', 'md', 'lg']),
+  interactive: PropTypes.bool,
+  className:   PropTypes.string,
 };

@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Store, Search, Filter, Check, Ban, Eye, AlertCircle, Phone, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Search, Check, Ban, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { formatDate } from '../../utils/formatDate';
 import { useUiStore } from '../../store/uiStore';
 import { formatCurrency } from '../../utils/formatDate';
 import DataTable from '../../components/shared/DataTable';
@@ -252,7 +251,7 @@ export default function ManageListings() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 select-none font-sans">
+    <div className="max-w-6xl mx-auto space-y-8 font-sans">
       
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 border-b border-stone-100 pb-3">

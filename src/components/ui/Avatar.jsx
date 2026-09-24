@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
 const sizeMap = {
@@ -19,8 +19,8 @@ function getInitials(name) {
 }
 
 /**
- * Circular avatar — shows image if available, otherwise renders initials
- * on a rose gradient background.
+ * Circular avatar — shows image if available (and loadable), otherwise renders
+ * initials on the brand gradient.
  *
  * @param {object} props
  * @param {string} [props.src]   — image URL
@@ -29,19 +29,20 @@ function getInitials(name) {
  */
 export function Avatar({ src, name, size = 'md', className = '' }) {
   const initials = getInitials(name);
+  const [broken, setBroken] = useState(false);
 
   return (
     <div
       className={`
         relative inline-flex items-center justify-center
         rounded-full overflow-hidden shrink-0
-        bg-gradient-to-br from-rose-400 to-rose-600
+        bg-gradient-to-br from-rose-400 to-rose-700 ring-2 ring-white
         text-white font-semibold
         ${sizeMap[size]} ${className}
       `}
     >
-      {src ? (
-        <img src={src} alt={name || 'Avatar'} className="h-full w-full object-cover" />
+      {src && !broken ? (
+        <img src={src} alt={name || 'Avatar'} className="h-full w-full object-cover" onError={() => setBroken(true)} />
       ) : (
         <span aria-label={name || 'User'}>{initials}</span>
       )}

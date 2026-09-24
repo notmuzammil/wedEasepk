@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
-  Store, MapPin, BadgePercent, ShieldAlert, ArrowLeft, 
-  Image as ImageIcon, Check, ChevronRight, UploadCloud, Trash2, Calendar
+  ArrowLeft, 
+  Image as Check, ChevronRight, UploadCloud, Trash2
 } from 'lucide-react';
 import { useCreateVenue } from '../../hooks/useVenues';
 import { useAuthStore } from '../../store/authStore';
@@ -201,7 +201,7 @@ export default function AddVenue() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6 select-none font-sans">
+    <div className="max-w-3xl mx-auto space-y-6 font-sans">
       
       {/* Top Breadcrumb header */}
       <div className="flex items-center gap-3">

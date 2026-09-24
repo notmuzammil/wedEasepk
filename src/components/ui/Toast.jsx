@@ -5,38 +5,10 @@ import { useUiStore } from '../../store/uiStore';
 const TOAST_DURATION_MS = 4000;
 
 const CONFIG = {
-  success: {
-    icon: CheckCircle2,
-    bg: 'bg-emerald-50 border-emerald-200',
-    icon_color: 'text-emerald-600',
-    title_color: 'text-emerald-900',
-    bar_color: 'bg-emerald-500',
-    label: 'Success',
-  },
-  error: {
-    icon: XCircle,
-    bg: 'bg-rose-50 border-rose-200',
-    icon_color: 'text-rose-600',
-    title_color: 'text-rose-900',
-    bar_color: 'bg-rose-500',
-    label: 'Error',
-  },
-  warning: {
-    icon: AlertTriangle,
-    bg: 'bg-amber-50 border-amber-200',
-    icon_color: 'text-amber-600',
-    title_color: 'text-amber-900',
-    bar_color: 'bg-amber-500',
-    label: 'Warning',
-  },
-  info: {
-    icon: Info,
-    bg: 'bg-sky-50 border-sky-200',
-    icon_color: 'text-sky-600',
-    title_color: 'text-sky-900',
-    bar_color: 'bg-sky-500',
-    label: 'Info',
-  },
+  success: { icon: CheckCircle2, tint: 'text-emerald-600 bg-emerald-50', bar: 'bg-emerald-500', label: 'Success' },
+  error:   { icon: XCircle,      tint: 'text-red-600 bg-red-50',         bar: 'bg-red-500',     label: 'Something went wrong' },
+  warning: { icon: AlertTriangle, tint: 'text-amber-600 bg-amber-50',    bar: 'bg-amber-500',   label: 'Heads up' },
+  info:    { icon: Info,         tint: 'text-sky-600 bg-sky-50',         bar: 'bg-sky-500',     label: 'Info' },
 };
 
 /**
@@ -63,49 +35,42 @@ export function Toast() {
 
   return (
     <div
+      // Re-key on message so the enter animation + progress bar restart
+      key={`${type}-${toast.message}`}
       role="alert"
       aria-live="polite"
-      className={`
-        fixed bottom-6 right-6 z-[9999] w-full max-w-sm
-        flex items-start gap-3 p-4 rounded-xl border shadow-xl
-        ${cfg.bg}
-        animate-in slide-in-from-right-4 fade-in-0 duration-300
-      `}
+      className="
+        fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 z-[9999] sm:w-full sm:max-w-sm
+        flex items-start gap-3 overflow-hidden rounded-2xl bg-white/95 p-4 pr-3 backdrop-blur-xl
+        shadow-lift ring-1 ring-stone-900/5
+        animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-right-8 duration-300
+      "
     >
-      {/* Icon */}
-      <Icon className={`mt-0.5 h-5 w-5 flex-shrink-0 ${cfg.icon_color}`} />
+      <span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl ${cfg.tint}`}>
+        <Icon className="h-5 w-5" />
+      </span>
 
-      {/* Body */}
-      <div className="flex-1 min-w-0">
-        <p className={`text-xs font-bold uppercase tracking-wider ${cfg.icon_color}`}>
-          {cfg.label}
-        </p>
-        <p className={`text-sm font-medium ${cfg.title_color} mt-0.5`}>
-          {toast.message}
-        </p>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <p className="text-sm font-semibold text-stone-900">{cfg.label}</p>
+        <p className="mt-0.5 text-sm text-stone-600 break-words">{toast.message}</p>
       </div>
 
-      {/* Dismiss */}
       <button
         onClick={clearToast}
-        className="rounded p-0.5 text-stone-400 hover:text-stone-600 transition-colors flex-shrink-0"
+        className="flex-shrink-0 rounded-lg p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
         aria-label="Dismiss notification"
       >
         <X className="h-4 w-4" />
       </button>
 
-      {/* Progress bar */}
       <span
-        className={`absolute bottom-0 left-0 h-1 rounded-b-xl ${cfg.bar_color} animate-shrink`}
+        className={`absolute bottom-0 left-0 h-[3px] ${cfg.bar} animate-toast-shrink`}
         style={{ animationDuration: `${TOAST_DURATION_MS}ms` }}
       />
 
       <style>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to   { width: 0%; }
-        }
-        .animate-shrink { animation: shrink linear forwards; }
+        @keyframes toast-shrink { from { width: 100%; } to { width: 0%; } }
+        .animate-toast-shrink { animation: toast-shrink linear forwards; }
       `}</style>
     </div>
   );
